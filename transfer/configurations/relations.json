@@ -1,0 +1,19 @@
+{
+  "interpret": {
+    "m:n": {
+      "alben": {
+        "1:n": {
+          "tracks":{
+            "n:1":{
+              "users": {}
+          }
+        }
+      },
+      "tracks": {
+        "n:1":{
+              "users": {}
+        }
+      }
+    }
+  }
+}
