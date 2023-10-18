@@ -1,17 +1,18 @@
 {
-  "interpret": {
+  "spotify.interpret": {
     "m:n": {
-      "alben": {
+      "spotify.alben": {
         "1:n": {
-          "tracks":{
-            "n:1":{
-              "users": {}
+          "spotify.tracks": {
+            "n:1": {
+              "spotify.users": {}
+            }
           }
         }
       },
-      "tracks": {
-        "n:1":{
-              "users": {}
+      "spotify.tracks": {
+        "n:1": {
+          "spotify.users": {}
         }
       }
     }

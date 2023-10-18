@@ -1,0 +1,2 @@
+class MalformedMappingException(Exception):
+    pass
