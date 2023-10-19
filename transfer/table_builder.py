@@ -19,6 +19,7 @@ class TableBuilder:
                 raise MalformedMappingException(
                     "The mapping file does not contain mapping information on " + str(relation.info))
 
+
 if __name__ == "__main__":
     relation_builder = RelationBuilder()
     with open("configurations/relations.json") as relation_file:

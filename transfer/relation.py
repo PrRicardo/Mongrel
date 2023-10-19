@@ -48,13 +48,18 @@ class Column:
     path: list[str]
     sql_definition: str
     data_type: Field
-    foreign_reference: list[RelationInfo] | None = None
+    foreign_references: list[RelationInfo] | None
+    conversion_args: dict
 
-    def __init__(self, target_name: str, path: list[str], sql_definition: str, data_type: Field):
+    def __init__(self, target_name: str, path: list[str], sql_definition: str, data_type: Field,
+                 foreign_references: RelationInfo = None, conversion_function=None, conversion_args=None):
         self.target_name = target_name
         self.path = path
         self.sql_definition = sql_definition
         self.data_type = data_type
+        self.foreign_references = foreign_references
+        self.conversion_function = conversion_function
+        self.conversion_args = conversion_args
 
     def __eq__(self, other):
         if isinstance(other, Column):
@@ -114,7 +119,7 @@ class Relation:
     def handle_conversion_fields(self, conversion_field_dict: dict):
         pass
 
-    def add_column(self, json_path: str, column_value: str, keys_dict: dict = None):
+    def add_column(self, json_path: str, column_value: str, keys_dict: dict = None, convert_dict: dict = None):
         def parse_column_value(col_val: str):
             col_val = col_val.strip()
             splittie = col_val.split(" ")
@@ -133,10 +138,17 @@ class Relation:
                 return Field.FOREIGN_KEY, RelationInfo(key_val.removeprefix("FK").strip())
             return Field.BASE, None
 
+        def parse_column_conversion(convert_dict:dict):
+            pass # TODO Conversion dict parse per column
+
         name, definition = parse_column_value(column_value)
         if name not in self.columns:
             if keys_dict is not None and name in keys_dict:
                 field_type, foreign_reference = parse_column_references(keys_dict[name])
+            else:
+                field_type, foreign_reference = Field.BASE, None
+            if convert_dict is not None and name in convert_dict:
+                field_type, foreign_reference = parse_column_conversion(convert_dict[name])
             else:
                 field_type, foreign_reference = Field.BASE, None
             broken_path = json_path.strip().split('.')
