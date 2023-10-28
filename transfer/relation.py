@@ -1,4 +1,5 @@
 from transfer.constants import Constants
+from transfer.conversions import Conversions
 from transfer.exceptions import MalformedMappingException
 from enum import Enum
 
@@ -21,7 +22,7 @@ class RelationInfo:
                 self.schema = liz[-2]
             else:
                 self.table = table
-                self.schema = ""
+                self.schema = ''
         else:
             self.table = table
             self.schema = schema
@@ -41,6 +42,9 @@ class RelationInfo:
 
     def __str__(self):
         return self.schema + ('.' if len(self.schema) > 0 else '') + self.table
+
+    def __hash__(self):
+        return hash(self.schema + ('.' if len(self.schema) > 0 else '') + self.table)
 
 
 class Column:
@@ -108,13 +112,49 @@ class Relation:
         for key, value in rel_dict.items():
             if key != Constants.CONVERSION_FIELDS and key != Constants.REFERENCE_KEY:
                 self.add_column(key, value,
-                                rel_dict[Constants.REFERENCE_KEY] if Constants.REFERENCE_KEY in rel_dict else None)
-        if Constants.CONVERSION_FIELDS in rel_dict:
-            self.handle_conversion_fields(rel_dict[Constants.CONVERSION_FIELDS])
+                                rel_dict[Constants.REFERENCE_KEY] if Constants.REFERENCE_KEY in rel_dict else None,
+                                rel_dict[
+                                    Constants.CONVERSION_FIELDS] if Constants.CONVERSION_FIELDS in rel_dict else None)
 
-    def create_relevant_tables(self):
-        creation_own = f"""
-        """
+    def make_creation_script(self, other_relations: dict):
+        pk_count = 0
+        creation_stmt = f"CREATE TABLE IF NOT EXISTS "
+        creation_stmt += f'"{self.info.schema}".' if len(self.info.schema) else ""
+        creation_stmt += f'"{self.info.table}"(\n'
+        for col in self.columns:
+            creation_stmt += f'\t"{col.target_name}" {col.sql_definition},\n'
+            pk_count += 1 if col.data_type == Field.PRIMARY_KEY else 0
+        if "n:1" in self.relations:
+            for rel in self.relations["n:1"]:
+                for other_col in other_relations[rel].columns:
+                    if other_col.data_type == Field.PRIMARY_KEY:
+                        creation_stmt += f'\t"{rel.table}_{other_col.target_name}" {other_col.sql_definition},\n'
+        if pk_count > 0:
+            creation_stmt += "\tPRIMARY KEY("
+            for col in self.columns:
+                if col.data_type == Field.PRIMARY_KEY:
+                    creation_stmt += f'"{col.target_name}", '
+            creation_stmt = creation_stmt[:-2]
+            creation_stmt += "),\n"
+        creation_stmt = creation_stmt[:-2]
+        creation_stmt += '\n);\n\n'
+        return creation_stmt
+
+    def create_nm_table(self, other) -> str:
+        assert isinstance(other, Relation), "Something went wrong when creating a nm table"
+        creation_stmt = f"CREATE TABLE IF NOT EXISTS "
+        creation_stmt += f'"{self.info.schema}".' if len(self.info.schema) else ""
+        creation_stmt += f'"{self.info.table}2{other.info.table}"(\n' \
+                         f'\t"{self.info.table}2{other.info.table}_id" BIGSERIAL PRIMARY KEY,\n'
+        for col in self.columns:
+            if col.data_type == Field.PRIMARY_KEY:
+                creation_stmt += f'\t"{self.info.table}_{col.target_name}" {col.sql_definition},\n'
+        for col in other.columns:
+            if col.data_type == Field.PRIMARY_KEY:
+                creation_stmt += f'\t"{other.info.table}_{col.target_name}" {col.sql_definition},\n'
+        creation_stmt = creation_stmt[:-2]
+        creation_stmt += "\n);\n\n"
+        return creation_stmt
 
     def handle_conversion_fields(self, conversion_field_dict: dict):
         pass
@@ -134,12 +174,22 @@ class Relation:
             if isinstance(key_val, str) and key_val.strip().startswith('PK'):
                 return Field.PRIMARY_KEY, None
             if isinstance(key_val, dict):
-                # TODO possible expansion to allow foreign keys
+                # FEATURE possible expansion to allow foreign keys
                 return Field.FOREIGN_KEY, RelationInfo(key_val.removeprefix("FK").strip())
             return Field.BASE, None
 
-        def parse_column_conversion(convert_dict:dict):
-            pass # TODO Conversion dict parse per column
+        def parse_column_conversion(convert_dict: dict):
+            if Constants.SOURCE_TYPE not in convert_dict:
+                raise MalformedMappingException(
+                    f"{Constants.SOURCE_TYPE} not found in conversion definition {convert_dict}")
+            if Constants.TARGET_TYPE not in convert_dict:
+                raise MalformedMappingException(
+                    f"{Constants.TARGET_TYPE} not found in conversion definition {convert_dict}")
+            source_type = convert_dict[Constants.SOURCE_TYPE]
+            target_type = convert_dict[Constants.TARGET_TYPE]
+            conversion_function = Conversions.get_conversion(source_type, target_type)
+            return conversion_function, convert_dict[
+                Constants.CONV_ARGS] if Constants.CONV_ARGS in convert_dict else None
 
         name, definition = parse_column_value(column_value)
         if name not in self.columns:
@@ -148,8 +198,9 @@ class Relation:
             else:
                 field_type, foreign_reference = Field.BASE, None
             if convert_dict is not None and name in convert_dict:
-                field_type, foreign_reference = parse_column_conversion(convert_dict[name])
+                conversion_function, extra_args = parse_column_conversion(convert_dict[name])
             else:
-                field_type, foreign_reference = Field.BASE, None
+                conversion_function, extra_args = None, None
             broken_path = json_path.strip().split('.')
-            self.columns.append(Column(name, broken_path, definition, field_type))
+            self.columns.append(
+                Column(name, broken_path, definition, field_type, foreign_reference, conversion_function, extra_args))

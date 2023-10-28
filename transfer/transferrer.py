@@ -1,0 +1,2 @@
+class Transferrer:
+    pass
