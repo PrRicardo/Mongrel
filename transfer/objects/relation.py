@@ -1,6 +1,6 @@
-from transfer.constants import Constants
-from transfer.conversions import Conversions
-from transfer.exceptions import MalformedMappingException
+from transfer.helpers.constants import Constants
+from transfer.helpers.conversions import Conversions
+from transfer.helpers.exceptions import MalformedMappingException
 from enum import Enum
 
 

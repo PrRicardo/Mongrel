@@ -1,8 +1,8 @@
 import json
 
-from transfer.exceptions import MalformedMappingException
-from transfer.relation import Relation
-from transfer.relation_builder import RelationBuilder
+from transfer.helpers.exceptions import MalformedMappingException
+from transfer.objects.relation import Relation
+from transfer.objects.relation_builder import RelationBuilder
 
 
 class TableBuilder:
@@ -59,3 +59,4 @@ if __name__ == "__main__":
     with open("configurations/mappings.json") as relation_file:
         table_builder.add_columns_to_relations(json.load(relation_file))
     creation_stmt = table_builder.make_creation_script()
+    pass

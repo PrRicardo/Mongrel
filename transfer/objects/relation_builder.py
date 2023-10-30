@@ -67,5 +67,5 @@ class RelationBuilder:
 
 if __name__ == '__main__':
     builder = RelationBuilder()
-    with open("configurations/relations.json") as relation_file:
+    with open("../configurations/relations.json") as relation_file:
         relations = builder.calculate_relations(json.load(relation_file))
