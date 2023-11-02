@@ -136,8 +136,28 @@ class Relation:
                     creation_stmt += f'"{col.target_name}", '
             creation_stmt = creation_stmt[:-2]
             creation_stmt += "),\n"
+        if "n:1" in self.relations:
+            for rel in self.relations["n:1"]:
+                creation_stmt += Relation.make_foreign_key(other_relations[rel], f'{rel.table}_')
         creation_stmt = creation_stmt[:-2]
         creation_stmt += '\n);\n\n'
+        return creation_stmt
+
+    @staticmethod
+    def make_foreign_key(relation, appendix=""):
+        creation_stmt = f'\tFOREIGN KEY ('
+        for col in relation.columns:
+            if col.data_type == Field.PRIMARY_KEY:
+                creation_stmt += f'"{appendix}{col.target_name}",'
+        creation_stmt = creation_stmt[:-1]
+        creation_stmt += f") REFERENCES "
+        creation_stmt += f'"{relation.info.schema}".' if len(relation.info.schema) else ""
+        creation_stmt += f'"{relation.info.table}" ('
+        for col in relation.columns:
+            if col.data_type == Field.PRIMARY_KEY:
+                creation_stmt += f'"{col.target_name}",'
+        creation_stmt = creation_stmt[:-1]
+        creation_stmt += f"),\n"
         return creation_stmt
 
     def create_nm_table(self, other) -> str:
@@ -152,6 +172,8 @@ class Relation:
         for col in other.columns:
             if col.data_type == Field.PRIMARY_KEY:
                 creation_stmt += f'\t"{other.info.table}_{col.target_name}" {col.sql_definition},\n'
+        creation_stmt += Relation.make_foreign_key(self, f'{self.info.table}_')
+        creation_stmt += Relation.make_foreign_key(other, f'{other.info.table}_')
         creation_stmt = creation_stmt[:-2]
         creation_stmt += "\n);\n\n"
         return creation_stmt

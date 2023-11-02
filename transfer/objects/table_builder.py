@@ -45,8 +45,26 @@ class TableBuilder:
 
     def make_creation_script(self) -> str:
         creation_stmt = self.create_schema_script()
+        done = []
         for relation in relations:
-            creation_stmt = creation_stmt + relation.make_creation_script(self.prepare_rel_dict())
+            if "n:1" not in relation.relations:
+                creation_stmt = creation_stmt + relation.make_creation_script(self.prepare_rel_dict())
+                done.append(relation)
+        while len(done) != len(relations):
+            progress = 0
+            for relation in relations:
+                if "n:1" in relation.relations:
+                    brrr = False
+                    for kek in relation.relations["n:1"]:
+                        if kek not in done:
+                            brrr = True
+                    if not brrr:
+                        creation_stmt = creation_stmt + relation.make_creation_script(self.prepare_rel_dict())
+                        done.append(relation)
+                        progress += 1
+            if progress == 0:
+                raise MalformedMappingException("There are cycles in the n:1 relations and therefore "
+                                                "no foreign key could be generated.")
         creation_stmt += self.create_nm_script()
         return creation_stmt
 
