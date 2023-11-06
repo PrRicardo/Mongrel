@@ -27,10 +27,15 @@ class TableBuilder:
 
     def create_nm_script(self) -> str:
         creation_stmt = ""
-        for relation in relations:
+        for relation in self.relations:
             if 'n:m' in relation.relations:
                 for nm_relation in relation.relations['n:m']:
-                    creation_stmt += relation.create_nm_table(relations[relations.index(nm_relation)])
+                    nm_table = relation.create_nm_table(
+                        self.relations[self.relations.index(nm_relation)])
+                    if nm_table not in self.relations:
+                        self.relations.append(nm_table)
+                    creation_stmt += nm_table.make_creation_script(
+                        other_relations=self.prepare_rel_dict(), infer_relation_cols=False)
         return creation_stmt
 
     def create_schema_script(self) -> str:
@@ -46,13 +51,13 @@ class TableBuilder:
     def make_creation_script(self) -> str:
         creation_stmt = self.create_schema_script()
         done = []
-        for relation in relations:
+        for relation in self.relations:
             if "n:1" not in relation.relations:
                 creation_stmt = creation_stmt + relation.make_creation_script(self.prepare_rel_dict())
                 done.append(relation)
-        while len(done) != len(relations):
+        while len(done) != len(self.relations):
             progress = 0
-            for relation in relations:
+            for relation in self.relations:
                 if "n:1" in relation.relations:
                     brrr = False
                     for kek in relation.relations["n:1"]:

@@ -4,9 +4,6 @@
       "spotify.alben": {
         "1:n": {
           "spotify.tracks": {
-            "n:1": {
-              "spotify.users": {}
-            }
           }
         }
       },

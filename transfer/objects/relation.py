@@ -52,16 +52,16 @@ class Column:
     path: list[str]
     sql_definition: str
     data_type: Field
-    foreign_references: list[RelationInfo] | None
+    foreign_reference: RelationInfo | None
     conversion_args: dict
 
     def __init__(self, target_name: str, path: list[str], sql_definition: str, data_type: Field,
-                 foreign_references: RelationInfo = None, conversion_function=None, conversion_args=None):
+                 foreign_reference: RelationInfo = None, conversion_function=None, conversion_args=None):
         self.target_name = target_name
         self.path = path
         self.sql_definition = sql_definition
         self.data_type = data_type
-        self.foreign_references = foreign_references
+        self.foreign_reference = foreign_reference
         self.conversion_function = conversion_function
         self.conversion_args = conversion_args
 
@@ -75,10 +75,8 @@ class Column:
                 return True
         return False
 
-    def set_foreign_reference(self, relation_info: RelationInfo):
-        if self.data_type != Field.FOREIGN_KEY:
-            raise MalformedMappingException("A column with a foreign key reference needs to be declared like a PK.")
-        self.foreign_reference = relation_info
+    def __hash__(self):
+        return hash(self.target_name + str(self.path) + self.sql_definition + str(self.data_type))
 
 
 class Relation:
@@ -116,7 +114,7 @@ class Relation:
                                 rel_dict[
                                     Constants.CONVERSION_FIELDS] if Constants.CONVERSION_FIELDS in rel_dict else None)
 
-    def make_creation_script(self, other_relations: dict):
+    def make_creation_script(self, other_relations: dict, infer_relation_cols=True):
         pk_count = 0
         creation_stmt = f"CREATE TABLE IF NOT EXISTS "
         creation_stmt += f'"{self.info.schema}".' if len(self.info.schema) else ""
@@ -124,11 +122,15 @@ class Relation:
         for col in self.columns:
             creation_stmt += f'\t"{col.target_name}" {col.sql_definition},\n'
             pk_count += 1 if col.data_type == Field.PRIMARY_KEY else 0
-        if "n:1" in self.relations:
-            for rel in self.relations["n:1"]:
-                for other_col in other_relations[rel].columns:
-                    if other_col.data_type == Field.PRIMARY_KEY:
-                        creation_stmt += f'\t"{rel.table}_{other_col.target_name}" {other_col.sql_definition},\n'
+        if infer_relation_cols:
+            if "n:1" in self.relations:
+                for rel in self.relations["n:1"]:
+                    for other_col in other_relations[rel].columns:
+                        if other_col.data_type == Field.PRIMARY_KEY:
+                            creation_stmt += f'\t"{rel.table}_{other_col.target_name}" {other_col.sql_definition},\n'
+                            self.columns.append(Column(other_col.target_name, other_col.path, other_col.sql_definition,
+                                                       Field.FOREIGN_KEY, rel))
+                            self.columns = list(set(self.columns))
         if pk_count > 0:
             creation_stmt += "\tPRIMARY KEY("
             for col in self.columns:
@@ -160,23 +162,28 @@ class Relation:
         creation_stmt += f"),\n"
         return creation_stmt
 
-    def create_nm_table(self, other) -> str:
+    def create_nm_table(self, other):
         assert isinstance(other, Relation), "Something went wrong when creating a nm table"
-        creation_stmt = f"CREATE TABLE IF NOT EXISTS "
-        creation_stmt += f'"{self.info.schema}".' if len(self.info.schema) else ""
-        creation_stmt += f'"{self.info.table}2{other.info.table}"(\n' \
-                         f'\t"{self.info.table}2{other.info.table}_id" BIGSERIAL PRIMARY KEY,\n'
+        return_relation = Relation(RelationInfo(schema=self.info.schema, table=f'{self.info.table}2{other.info.table}'))
+        return_relation.columns.append(
+            Column(target_name=f'{self.info.table}2{other.info.table}_id', path=None, sql_definition="BIGSERIAL",
+                   data_type=Field.PRIMARY_KEY))
         for col in self.columns:
             if col.data_type == Field.PRIMARY_KEY:
-                creation_stmt += f'\t"{self.info.table}_{col.target_name}" {col.sql_definition},\n'
+                return_relation.columns.append(
+                    Column(target_name=f'{self.info.table}_{col.target_name}', path=col.path,
+                           foreign_reference=self.info,
+                           sql_definition=col.sql_definition,
+                           data_type=Field.BASE))
         for col in other.columns:
             if col.data_type == Field.PRIMARY_KEY:
-                creation_stmt += f'\t"{other.info.table}_{col.target_name}" {col.sql_definition},\n'
-        creation_stmt += Relation.make_foreign_key(self, f'{self.info.table}_')
-        creation_stmt += Relation.make_foreign_key(other, f'{other.info.table}_')
-        creation_stmt = creation_stmt[:-2]
-        creation_stmt += "\n);\n\n"
-        return creation_stmt
+                return_relation.columns.append(
+                    Column(target_name=f'{other.info.table}_{col.target_name}', path=col.path,
+                           foreign_reference=other.info,
+                           sql_definition=col.sql_definition,
+                           data_type=Field.BASE))
+        return_relation.relations["n:1"] = [self.info, other.info]
+        return return_relation
 
     def handle_conversion_fields(self, conversion_field_dict: dict):
         pass
