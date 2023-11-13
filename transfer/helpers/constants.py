@@ -4,3 +4,4 @@ class Constants:
     SOURCE_TYPE = "source_type"
     TARGET_TYPE = "target_type"
     CONV_ARGS = "args"
+    PATH_SEP = "👏"

@@ -10,6 +10,17 @@ class Conversions:
         raise NotImplementedError(f"The conversion of {source_type} to {target_type} is not implemented!")
 
     @staticmethod
-    def string_to_date(val, formatting="%Y-%m-%d"):
-        parsed = datetime.strptime(val, formatting)
+    def string_to_date(val, **kwargs):
+        if val is None:
+            return val
+        if len(val) == 4:
+            parsed = datetime.strptime(val, "%Y")
+        elif len(val) == 7:
+            parsed = datetime.strptime(val, "%Y-%M")
+        else:
+            parsed = datetime.strptime(val, kwargs["format"])
         return parsed.strftime("%Y-%m-%d")
+
+    @staticmethod
+    def do_nothing(val, **kwargs):
+        return val

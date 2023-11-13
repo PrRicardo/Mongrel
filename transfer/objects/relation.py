@@ -1,3 +1,4 @@
+import pandas as pd
 from transfer.helpers.constants import Constants
 from transfer.helpers.conversions import Conversions
 from transfer.helpers.exceptions import MalformedMappingException
@@ -50,20 +51,27 @@ class RelationInfo:
 class Column:
     target_name: str
     path: list[str]
+    translated_path: str
     sql_definition: str
     data_type: Field
     foreign_reference: RelationInfo | None
     conversion_args: dict
 
     def __init__(self, target_name: str, path: list[str], sql_definition: str, data_type: Field,
-                 foreign_reference: RelationInfo = None, conversion_function=None, conversion_args=None):
+                 foreign_reference: RelationInfo = None, conversion_function=None,
+                 conversion_args=None):
         self.target_name = target_name
         self.path = path
         self.sql_definition = sql_definition
         self.data_type = data_type
         self.foreign_reference = foreign_reference
-        self.conversion_function = conversion_function
-        self.conversion_args = conversion_args
+        self.conversion_function = conversion_function if conversion_function else Conversions.do_nothing
+        self.conversion_args = conversion_args if conversion_args else {}
+        self.translated_path = ''
+        if path is not None:
+            for sub_path in path:
+                self.translated_path += sub_path + Constants.PATH_SEP
+            self.translated_path = self.translated_path[:-1]
 
     def __eq__(self, other):
         if isinstance(other, Column):
@@ -83,11 +91,13 @@ class Relation:
     info: RelationInfo
     relations: dict[str, list[RelationInfo]]
     columns: list[Column]
+    prepped: bool
 
     def __init__(self, info):
         self.info = info
         self.relations = {}
         self.columns = []
+        self.prepped = False
 
     def __eq__(self, other):
         if isinstance(other, RelationInfo):
@@ -97,6 +107,20 @@ class Relation:
             if other.info == self.info and self.relations == other.relations:
                 return True
         return False
+
+    def get_longest_path(self):
+        lengths = []
+        for column in self.columns:
+            lengths.append(len(column.path))
+        return max(lengths)
+
+    def make_df(self) -> pd.DataFrame:
+        collie_strs = []
+        for col in self.columns:
+            if col.path is not None:
+                collie_strs.append(col.target_name)
+        df = pd.DataFrame(columns=collie_strs)
+        return df
 
     def add_relations(self, relation_list: list[str, str]):
         for key, val in relation_list:
@@ -114,7 +138,20 @@ class Relation:
                                 rel_dict[
                                     Constants.CONVERSION_FIELDS] if Constants.CONVERSION_FIELDS in rel_dict else None)
 
-    def make_creation_script(self, other_relations: dict, infer_relation_cols=True):
+    def prepare_columns(self, other_relations: dict):
+        if "n:1" in self.relations and not self.prepped:
+            for rel in self.relations["n:1"]:
+                for other_col in other_relations[rel].columns:
+                    if other_col.data_type == Field.PRIMARY_KEY \
+                            and f'{rel.table}_{other_col.target_name}' not in self.columns:
+                        self.columns.append(
+                            Column(f'{rel.table}_{other_col.target_name}', other_col.path, other_col.sql_definition,
+                                   Field.FOREIGN_KEY, rel))
+        self.prepped = True
+
+    def make_creation_script(self, other_relations: dict):
+        if not self.prepped:
+            self.prepare_columns(other_relations)
         pk_count = 0
         creation_stmt = f"CREATE TABLE IF NOT EXISTS "
         creation_stmt += f'"{self.info.schema}".' if len(self.info.schema) else ""
@@ -122,15 +159,6 @@ class Relation:
         for col in self.columns:
             creation_stmt += f'\t"{col.target_name}" {col.sql_definition},\n'
             pk_count += 1 if col.data_type == Field.PRIMARY_KEY else 0
-        if infer_relation_cols:
-            if "n:1" in self.relations:
-                for rel in self.relations["n:1"]:
-                    for other_col in other_relations[rel].columns:
-                        if other_col.data_type == Field.PRIMARY_KEY:
-                            creation_stmt += f'\t"{rel.table}_{other_col.target_name}" {other_col.sql_definition},\n'
-                            self.columns.append(Column(other_col.target_name, other_col.path, other_col.sql_definition,
-                                                       Field.FOREIGN_KEY, rel))
-                            self.columns = list(set(self.columns))
         if pk_count > 0:
             creation_stmt += "\tPRIMARY KEY("
             for col in self.columns:
@@ -162,27 +190,14 @@ class Relation:
         creation_stmt += f"),\n"
         return creation_stmt
 
-    def create_nm_table(self, other):
+    def create_nm_table(self, other, other_relations: dict):
         assert isinstance(other, Relation), "Something went wrong when creating a nm table"
         return_relation = Relation(RelationInfo(schema=self.info.schema, table=f'{self.info.table}2{other.info.table}'))
         return_relation.columns.append(
             Column(target_name=f'{self.info.table}2{other.info.table}_id', path=None, sql_definition="BIGSERIAL",
                    data_type=Field.PRIMARY_KEY))
-        for col in self.columns:
-            if col.data_type == Field.PRIMARY_KEY:
-                return_relation.columns.append(
-                    Column(target_name=f'{self.info.table}_{col.target_name}', path=col.path,
-                           foreign_reference=self.info,
-                           sql_definition=col.sql_definition,
-                           data_type=Field.BASE))
-        for col in other.columns:
-            if col.data_type == Field.PRIMARY_KEY:
-                return_relation.columns.append(
-                    Column(target_name=f'{other.info.table}_{col.target_name}', path=col.path,
-                           foreign_reference=other.info,
-                           sql_definition=col.sql_definition,
-                           data_type=Field.BASE))
         return_relation.relations["n:1"] = [self.info, other.info]
+        return_relation.prepare_columns(other_relations)
         return return_relation
 
     def handle_conversion_fields(self, conversion_field_dict: dict):
