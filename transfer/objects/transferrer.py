@@ -188,10 +188,10 @@ if __name__ == "__main__":
     with open("../configurations/relations.json") as relation_file:
         relations = relation_builder.calculate_relations(json.load(relation_file))
     table_builder = TableBuilder(relations, "../configurations/mappings.json")
+    creation_stmt = table_builder.make_creation_script()
     transferrer = Transferrer(table_builder.get_relations(), mongo_host="localhost", mongo_port=27017,
                               mongo_database="hierarchical_relational_test",
                               mongo_collection="test_tracks", sql_host='127.0.0.1', sql_database='ricardo',
                               sql_user='ricardo', sql_port=5432, sql_password=os.getenv("PASSWORD"))
-    creation_stmt = table_builder.make_creation_script()
     transferrer.prepare_database(creation_stmt)
     transferrer.transfer_data()

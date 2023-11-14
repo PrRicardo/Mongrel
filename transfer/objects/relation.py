@@ -138,7 +138,7 @@ class Relation:
                                 rel_dict[
                                     Constants.CONVERSION_FIELDS] if Constants.CONVERSION_FIELDS in rel_dict else None)
 
-    def prepare_columns(self, other_relations: dict):
+    def prepare_columns(self, other_relations: dict, fk_are_pk = False):
         if "n:1" in self.relations and not self.prepped:
             for rel in self.relations["n:1"]:
                 for other_col in other_relations[rel].columns:
@@ -146,7 +146,7 @@ class Relation:
                             and f'{rel.table}_{other_col.target_name}' not in self.columns:
                         self.columns.append(
                             Column(f'{rel.table}_{other_col.target_name}', other_col.path, other_col.sql_definition,
-                                   Field.FOREIGN_KEY, rel))
+                                   Field.PRIMARY_KEY if fk_are_pk else Field.FOREIGN_KEY, rel))
         self.prepped = True
 
     def make_creation_script(self, other_relations: dict):
@@ -193,11 +193,11 @@ class Relation:
     def create_nm_table(self, other, other_relations: dict):
         assert isinstance(other, Relation), "Something went wrong when creating a nm table"
         return_relation = Relation(RelationInfo(schema=self.info.schema, table=f'{self.info.table}2{other.info.table}'))
-        return_relation.columns.append(
-            Column(target_name=f'{self.info.table}2{other.info.table}_id', path=None, sql_definition="BIGSERIAL",
-                   data_type=Field.PRIMARY_KEY))
+        # return_relation.columns.append(
+            # Column(target_name=f'{self.info.table}2{other.info.table}_id', path=None, sql_definition="BIGSERIAL",
+            #      data_type=Field.PRIMARY_KEY))
         return_relation.relations["n:1"] = [self.info, other.info]
-        return_relation.prepare_columns(other_relations)
+        return_relation.prepare_columns(other_relations, fk_are_pk = True)
         return return_relation
 
     def handle_conversion_fields(self, conversion_field_dict: dict):
