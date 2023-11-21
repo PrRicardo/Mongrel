@@ -3,7 +3,7 @@ import os
 from transfer.helpers.MapFlattener import flatten
 from transfer.helpers.constants import Constants
 from transfer.helpers.exceptions import MalformedMappingException
-from transfer.objects.relation import Relation, RelationInfo, Field
+from transfer.objects.relation import Relation, RelationInfo
 from transfer.objects.relation_builder import RelationBuilder
 from transfer.objects.table_builder import TableBuilder
 from transfer.helpers.database_functions import DatabaseFunctions
@@ -23,7 +23,7 @@ class Transferrer:
 
     def __init__(self, relation_list: list[Relation], mongo_host: str, mongo_database: str, mongo_collection: str,
                  sql_host: str, sql_database: str, mongo_port: int = None, sql_port: int = None, sql_user=None,
-                 sql_password=None, mongo_user: str = None, mongo_password: str = None, batch_size=100):
+                 sql_password=None, mongo_user: str = None, mongo_password: str = None, batch_size=1000):
 
         self.mongo_collection = mongo_collection
         self.sql_password = sql_password
@@ -94,7 +94,8 @@ class Transferrer:
     def create_data_dict(self):
         data: dict[RelationInfo, pd.DataFrame] = {}
         for relation in self.relations:
-            data[relation.info] = relation.make_df()
+            relation_info = relation.info if not relation.alias else relation.alias
+            data[relation_info] = relation.make_df()
         return data
 
     def analyze_structure(self, doc: dict, relation: Relation):
@@ -176,17 +177,20 @@ class Transferrer:
                 for relation in self.relations:
                     vals = self.read_document_lines(doc, relation)
                     df = pd.DataFrame.from_dict(vals, orient='index').transpose()
-                    data[relation.info] = pd.concat([data[relation.info], df], ignore_index=True)
-                    if len(data[relation.info]) > self.batch_size:
-                        self.write_cascading(relation.info, data, connie)
+                    relation_info = relation.info if not relation.alias else relation.alias
+                    data[relation_info] = pd.concat([data[relation_info], df], ignore_index=True)
+                    if len(data[relation_info]) > self.batch_size:
+                        self.write_cascading(relation_info, data, connie)
             for relation in self.relations:
-                self.write_cascading(relation.info, data, connie)
+                relation_info = relation.info if not relation.alias else relation.alias
+                self.write_cascading(relation_info, data, connie)
 
 
 if __name__ == "__main__":
     relation_builder = RelationBuilder()
     with open("../configurations/relations.json") as relation_file:
-        relations = relation_builder.calculate_relations(json.load(relation_file))
+        with open("../configurations/mappings.json") as mapping_file:
+            relations = relation_builder.calculate_relations(json.load(relation_file), json.load(mapping_file))
     table_builder = TableBuilder(relations, "../configurations/mappings.json")
     creation_stmt = table_builder.make_creation_script()
     transferrer = Transferrer(table_builder.get_relations(), mongo_host="localhost", mongo_port=27017,

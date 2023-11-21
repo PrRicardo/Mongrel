@@ -1,5 +1,6 @@
 import json
 from relation import Relation, RelationInfo
+from transfer.helpers.constants import Constants
 
 
 class RelationBuilder:
@@ -22,19 +23,22 @@ class RelationBuilder:
         return relation_lists
 
     @staticmethod
-    def fetch_unique_relations(relation_lists):
+    def fetch_unique_relations(relation_lists, mapping_dict):
         relations = []
         for relation_list in relation_lists:
             for idx, val in enumerate(relation_list):
                 if idx % 2 == 0:
                     if RelationInfo(val) not in relations:
-                        relations.append(Relation(RelationInfo(val)))
+                        if Constants.TRAN_OPTIONS in mapping_dict[val]:
+                            relations.append(Relation(RelationInfo(val), mapping_dict[val][Constants.TRAN_OPTIONS]))
+                        else:
+                            relations.append(Relation(RelationInfo(val)))
         return relations
 
     @staticmethod
-    def calculate_relations(json_tracks: dict):
+    def calculate_relations(json_tracks: dict, mapping_dict: dict):
         relation_lists = RelationBuilder.get_relation_lists(json_tracks)
-        unique_relations = RelationBuilder.fetch_unique_relations(relation_lists)
+        unique_relations = RelationBuilder.fetch_unique_relations(relation_lists, mapping_dict)
         for relation in unique_relations:
             for relation_list in relation_lists:
                 if str(relation.info) in relation_list:
@@ -43,7 +47,7 @@ class RelationBuilder:
         return unique_relations
 
     @staticmethod
-    def parse_relations(info: RelationInfo, relation_list: list[str]) -> list[str, str]:
+    def parse_relations(info: RelationInfo, relation_list: list[str]) -> list[tuple[str, str]]:
         def parse_left(location, lis):
             rel = lis[location - 1]
             rel_arr = rel.split(":")
@@ -68,4 +72,5 @@ class RelationBuilder:
 if __name__ == '__main__':
     builder = RelationBuilder()
     with open("../configurations/relations.json") as relation_file:
-        relations = builder.calculate_relations(json.load(relation_file))
+        with open("../configurations/mappings.json") as mapping_file:
+            relations = builder.calculate_relations(json.load(relation_file), json.load(mapping_file))

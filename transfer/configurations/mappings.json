@@ -5,25 +5,41 @@
     "track.album.album_type": "album_type CHARACTER VARYING(32)",
     "track.album.release_date": "release_date DATE",
     "track.album.total_tracks": "total_tracks INTEGER",
-    "conversion_fields": {
-      "release_date": {
-        "source_type": "string",
-        "target_type": "date",
-        "args": {
-          "format": "%Y-%m-%d"
+    "transfer_options": {
+      "conversion_fields": {
+        "release_date": {
+          "source_type": "string",
+          "target_type": "date",
+          "args": {
+            "format": "%Y-%m-%d"
+          }
         }
+      },
+      "reference_keys": {
+        "id": "PK"
       }
-    },
-    "reference_keys": {
-      "id": "PK"
     }
   },
-  "spotify.interpret": {
+  "spotify.track_interpret": {
     "track.artists.id": "id CHARACTER VARYING(24)",
     "track.artists.name": "name CHARACTER VARYING(512)",
     "track.artists.type": "type CHARACTER VARYING(128)",
-    "reference_keys": {
-      "id": "PK"
+    "transfer_options": {
+      "reference_keys": {
+        "id": "PK"
+      },
+      "alias": "spotify.interpret"
+    }
+  },
+  "spotify.alb_interpret": {
+    "track.album.artists.id": "id CHARACTER VARYING(24)",
+    "track.album.artists.name": "name CHARACTER VARYING(512)",
+    "track.album.artists.type": "type CHARACTER VARYING(128)",
+    "transfer_options": {
+      "reference_keys": {
+        "id": "PK"
+      },
+      "alias": "spotify.interpret"
     }
   },
   "spotify.tracks": {
@@ -32,16 +48,20 @@
     "track.popularity": "popularity INTEGER",
     "track.track_number": "track_number INTEGER",
     "track.type": "type CHARACTER VARYING",
-    "reference_keys": {
-      "id": "PK"
+    "transfer_options": {
+      "reference_keys": {
+        "id": "PK"
+      }
     }
   },
   "spotify.users": {
     "added_by.id": "id CHARACTER VARYING(512)",
     "added_by.type": "type CHARACTER VARYING(128)",
-    "reference_keys": {
-      "id": "PK",
-      "type": "PK"
+    "transfer_options": {
+      "reference_keys": {
+        "id": "PK",
+        "type": "PK"
+      }
     }
   }
 }

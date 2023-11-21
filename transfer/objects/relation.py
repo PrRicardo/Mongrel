@@ -75,8 +75,7 @@ class Column:
 
     def __eq__(self, other):
         if isinstance(other, Column):
-            if self.target_name == other.target_name and self.path == other.path \
-                    and self.sql_definition == other.sql_definition:
+            if self.target_name == other.target_name and self.sql_definition == other.sql_definition:
                 return True
         if isinstance(other, str):
             if self.target_name == other:
@@ -92,12 +91,16 @@ class Relation:
     relations: dict[str, list[RelationInfo]]
     columns: list[Column]
     prepped: bool
+    alias: RelationInfo | None
 
-    def __init__(self, info):
+    def __init__(self, info, options: dict = None):
         self.info = info
         self.relations = {}
         self.columns = []
         self.prepped = False
+        if options is None:
+            options = {}
+        self.alias = RelationInfo(options[Constants.ALIAS]) if Constants.ALIAS in options else None
 
     def __eq__(self, other):
         if isinstance(other, RelationInfo):
@@ -122,7 +125,7 @@ class Relation:
         df = pd.DataFrame(columns=collie_strs)
         return df
 
-    def add_relations(self, relation_list: list[str, str]):
+    def add_relations(self, relation_list: list[tuple[str, str]]):
         for key, val in relation_list:
             if key in self.relations:
                 if val not in self.relations[key]:
@@ -132,57 +135,94 @@ class Relation:
 
     def parse_column_dict(self, rel_dict):
         for key, value in rel_dict.items():
-            if key != Constants.CONVERSION_FIELDS and key != Constants.REFERENCE_KEY:
-                self.add_column(key, value,
-                                rel_dict[Constants.REFERENCE_KEY] if Constants.REFERENCE_KEY in rel_dict else None,
-                                rel_dict[
-                                    Constants.CONVERSION_FIELDS] if Constants.CONVERSION_FIELDS in rel_dict else None)
+            if key != Constants.TRAN_OPTIONS:
+                if Constants.TRAN_OPTIONS in rel_dict:
+                    options = rel_dict[Constants.TRAN_OPTIONS]
+                    self.add_column(key, value,
+                                    options[Constants.REFERENCE_KEY] if Constants.REFERENCE_KEY in options else None,
+                                    options[
+                                        Constants.CONVERSION_FIELDS] if Constants.CONVERSION_FIELDS in options else None)
+                else:
+                    self.add_column(key, value)
 
-    def prepare_columns(self, other_relations: dict, fk_are_pk = False):
+    def prepare_columns(self, other_relations: dict, fk_are_pk=False):
         if "n:1" in self.relations and not self.prepped:
             for rel in self.relations["n:1"]:
                 for other_col in other_relations[rel].columns:
+                    rel_info = rel
+                    if other_relations[rel].alias:
+                        rel_info = other_relations[rel].alias
                     if other_col.data_type == Field.PRIMARY_KEY \
-                            and f'{rel.table}_{other_col.target_name}' not in self.columns:
+                            and f'{rel_info.table}_{other_col.target_name}' not in self.columns:
                         self.columns.append(
-                            Column(f'{rel.table}_{other_col.target_name}', other_col.path, other_col.sql_definition,
-                                   Field.PRIMARY_KEY if fk_are_pk else Field.FOREIGN_KEY, rel))
+                            Column(f'{rel_info.table}_{other_col.target_name}', other_col.path,
+                                   other_col.sql_definition,
+                                   Field.PRIMARY_KEY if fk_are_pk else Field.FOREIGN_KEY, rel_info))
         self.prepped = True
 
-    def make_creation_script(self, other_relations: dict):
+    def get_alias_relations(self, other_relations: list) -> list | None:
+        if not self.alias:
+            return None
+        return [kek for kek in other_relations if
+                kek.alias == self.alias and kek != self]
+
+    def make_creation_script(self, other_relations: dict, alias_relations: list = None):
         if not self.prepped:
             self.prepare_columns(other_relations)
         pk_count = 0
+        schema_name = self.alias.schema if self.alias else self.info.schema
+        table_name = self.alias.table if self.alias else self.info.table
         creation_stmt = f"CREATE TABLE IF NOT EXISTS "
-        creation_stmt += f'"{self.info.schema}".' if len(self.info.schema) else ""
-        creation_stmt += f'"{self.info.table}"(\n'
+        creation_stmt += f'"{schema_name}".' if len(schema_name) else ""
+        creation_stmt += f'"{table_name}"(\n'
         for col in self.columns:
             creation_stmt += f'\t"{col.target_name}" {col.sql_definition},\n'
             pk_count += 1 if col.data_type == Field.PRIMARY_KEY else 0
+        if alias_relations:
+            for alias_relation in alias_relations:
+                for col in alias_relation.columns:
+                    if col not in self.columns:
+                        creation_stmt += f'\t"{col.target_name}" {col.sql_definition},\n'
+                        pk_count += 1 if col.data_type == Field.PRIMARY_KEY else 0
         if pk_count > 0:
             creation_stmt += "\tPRIMARY KEY("
             for col in self.columns:
                 if col.data_type == Field.PRIMARY_KEY:
                     creation_stmt += f'"{col.target_name}", '
+            if alias_relations:
+                for alias_relation in alias_relations:
+                    for col in alias_relation.columns:
+                        if col not in self.columns:
+                            if col.data_type == Field.PRIMARY_KEY:
+                                creation_stmt += f'"{col.target_name}", '
             creation_stmt = creation_stmt[:-2]
             creation_stmt += "),\n"
         if "n:1" in self.relations:
             for rel in self.relations["n:1"]:
-                creation_stmt += Relation.make_foreign_key(other_relations[rel], f'{rel.table}_')
+                appendix = other_relations[rel].alias.table if other_relations[rel].alias else rel.table
+                creation_stmt += Relation.make_foreign_key(other_relations[rel], f'{appendix}_')
+        if alias_relations:
+            for alias_relation in alias_relations:
+                if "n:1" in alias_relation.relations:
+                    for rel in alias_relation.relations["n:1"]:
+                        appendix = other_relations[rel].alias.table if other_relations[rel].alias else rel.table
+                        creation_stmt += Relation.make_foreign_key(other_relations[rel], f'{appendix}_')
         creation_stmt = creation_stmt[:-2]
         creation_stmt += '\n);\n\n'
         return creation_stmt
 
     @staticmethod
     def make_foreign_key(relation, appendix=""):
+        relation_schema = relation.alias.schema if relation.alias else relation.info.schema
+        relation_table = relation.alias.table if relation.alias else relation.info.table
         creation_stmt = f'\tFOREIGN KEY ('
         for col in relation.columns:
             if col.data_type == Field.PRIMARY_KEY:
                 creation_stmt += f'"{appendix}{col.target_name}",'
         creation_stmt = creation_stmt[:-1]
         creation_stmt += f") REFERENCES "
-        creation_stmt += f'"{relation.info.schema}".' if len(relation.info.schema) else ""
-        creation_stmt += f'"{relation.info.table}" ('
+        creation_stmt += f'"{relation_schema}".' if len(relation_schema) else ""
+        creation_stmt += f'"{relation_table}" ('
         for col in relation.columns:
             if col.data_type == Field.PRIMARY_KEY:
                 creation_stmt += f'"{col.target_name}",'
@@ -192,12 +232,11 @@ class Relation:
 
     def create_nm_table(self, other, other_relations: dict):
         assert isinstance(other, Relation), "Something went wrong when creating a nm table"
-        return_relation = Relation(RelationInfo(schema=self.info.schema, table=f'{self.info.table}2{other.info.table}'))
-        # return_relation.columns.append(
-            # Column(target_name=f'{self.info.table}2{other.info.table}_id', path=None, sql_definition="BIGSERIAL",
-            #      data_type=Field.PRIMARY_KEY))
+        own_name = self.info.table if not self.alias else self.alias.table
+        other_name = other.info.table if not other.alias else other.alias.table
+        return_relation = Relation(RelationInfo(schema=self.info.schema, table=f'{own_name}2{other_name}'))
         return_relation.relations["n:1"] = [self.info, other.info]
-        return_relation.prepare_columns(other_relations, fk_are_pk = True)
+        return_relation.prepare_columns(other_relations, fk_are_pk=True)
         return return_relation
 
     def handle_conversion_fields(self, conversion_field_dict: dict):
@@ -218,8 +257,9 @@ class Relation:
             if isinstance(key_val, str) and key_val.strip().startswith('PK'):
                 return Field.PRIMARY_KEY, None
             if isinstance(key_val, dict):
-                # FEATURE possible expansion to allow foreign keys
-                return Field.FOREIGN_KEY, RelationInfo(key_val.removeprefix("FK").strip())
+                pass
+                # FEATURE possible expansion to allow foreign keys, Currently not used
+                # return Field.FOREIGN_KEY, RelationInfo(key_val.removeprefix("FK").strip())
             return Field.BASE, None
 
         def parse_column_conversion(convert_dict: dict):

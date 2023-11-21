@@ -5,3 +5,5 @@ class Constants:
     TARGET_TYPE = "target_type"
     CONV_ARGS = "args"
     PATH_SEP = "👏"
+    TRAN_OPTIONS = "transfer_options"
+    ALIAS = "alias"

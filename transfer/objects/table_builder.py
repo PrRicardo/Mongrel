@@ -47,10 +47,9 @@ class TableBuilder:
 
     def create_schema_script(self) -> str:
         creation_stmt_inner = ""
-        unique_schemas = []
+        unique_schemas = set()
         for relation in self._relations:
-            if relation.info.schema not in unique_schemas:
-                unique_schemas.append(relation.info.schema)
+            unique_schemas.add(relation.info.schema if not relation.alias else relation.alias.schema)
         for schema in unique_schemas:
             creation_stmt_inner = creation_stmt_inner + f'CREATE SCHEMA IF NOT EXISTS "{schema}";\n\n'
         return creation_stmt_inner
@@ -59,21 +58,49 @@ class TableBuilder:
         creation_stmt_inner = self.create_schema_script()
         done = []
         for relation in self._relations:
-            if "n:1" not in relation.relations:
-                creation_stmt_inner = creation_stmt_inner + relation.make_creation_script(self._rel_dict)
-                done.append(relation)
+            if relation not in done:
+                if not relation.alias:
+                    if "n:1" not in relation.relations:
+                        creation_stmt_inner = creation_stmt_inner + relation.make_creation_script(self._rel_dict)
+                        done.append(relation)
+                else:
+                    if "n:1" not in relation.relations:
+                        alias_relations = relation.get_alias_relations(self._relations)
+                        fine = True
+                        for alias_relation in alias_relations:
+                            if "n:1" in alias_relation.relations:
+                                fine = False
+                                break
+                        if fine:
+                            creation_stmt_inner = creation_stmt_inner + relation.make_creation_script(self._rel_dict,
+                                                                                                      alias_relations)
+                            done.append(relation)
+                            done.extend(alias_relations)
+
         while len(done) != len(self._relations):
             progress = 0
             for relation in self._relations:
-                if "n:1" in relation.relations:
+                if "n:1" in relation.relations and relation not in done:
                     brrr = False
                     for kek in relation.relations["n:1"]:
                         if kek not in done:
                             brrr = True
                     if not brrr:
-                        creation_stmt_inner = creation_stmt_inner + relation.make_creation_script(self._rel_dict)
-                        done.append(relation)
-                        progress += 1
+                        if not relation.alias:
+                            creation_stmt_inner = creation_stmt_inner + relation.make_creation_script(self._rel_dict)
+                            done.append(relation)
+                            progress += 1
+                        else:
+                            alias_relations = relation.get_alias_relations(self._relations)
+                            for rellie in alias_relations:
+                                for kek in rellie.relations["n:1"]:
+                                    if kek not in done:
+                                        brrr = True
+                            if not brrr:
+                                creation_stmt_inner = creation_stmt_inner + relation.make_creation_script(
+                                    self._rel_dict)
+                                done.append(relation)
+                                progress += 1
             if progress == 0:
                 raise MalformedMappingException("There are cycles in the n:1 relations and therefore "
                                                 "no foreign key could be generated.")
@@ -83,7 +110,8 @@ class TableBuilder:
 if __name__ == "__main__":
     relation_builder = RelationBuilder()
     with open("configurations/relations.json") as relation_file:
-        relations = relation_builder.calculate_relations(json.load(relation_file))
+        with open("configurations/mappings.json") as mapping_file:
+            relations = relation_builder.calculate_relations(json.load(relation_file),json.load(mapping_file))
     table_builder = TableBuilder(relations, "configurations/mappings.json")
     creation_stmt = table_builder.make_creation_script()
     pass
