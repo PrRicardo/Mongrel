@@ -1,3 +1,6 @@
+"""
+This file contains the main logic for the objects in the transfers.
+"""
 import pandas as pd
 from transfer.helpers.constants import Constants
 from transfer.helpers.conversions import Conversions
@@ -6,16 +9,28 @@ from enum import Enum
 
 
 class Field(Enum):
+    """
+    This enum is used to identify the three different types of fields in sql tables.
+    """
     PRIMARY_KEY = 0
     FOREIGN_KEY = 1
     BASE = 2
 
 
 class RelationInfo:
+    """
+    Relation Info objects describe the name of the relations used. They can have a schema and always need a table_name.
+    """
     table: str
     schema: str
 
     def __init__(self, table: str, schema: str = None):
+        """
+        Parse a string into the table and schema format used in the relational database
+        :param table: the table name or an entire string with schema.table
+        :param schema: the schema name if it's already parsed somehow
+        """
+        # Check for schema if empty
         if schema is None:
             liz = table.split('.')
             if len(liz) > 1:
@@ -29,6 +44,9 @@ class RelationInfo:
             self.schema = schema
 
     def __eq__(self, other):
+        """
+        Overloaded to make it a little bit easier to compare
+        """
         if isinstance(other, RelationInfo):
             if other.table == self.table and other.schema == self.schema:
                 return True
@@ -45,25 +63,43 @@ class RelationInfo:
         return self.schema + ('.' if len(self.schema) > 0 else '') + self.table
 
     def __hash__(self):
+        """
+        Implemented for the dictionary usage of RelationInfo
+        """
         return hash(self.schema + ('.' if len(self.schema) > 0 else '') + self.table)
 
 
 class Column:
+    """
+    The column class is used to represent columns in the tables which are used for the transfer configuration
+    """
     target_name: str
     path: list[str]
     translated_path: str
     sql_definition: str
-    data_type: Field
+    field_type: Field
     foreign_reference: RelationInfo | None
     conversion_args: dict
 
-    def __init__(self, target_name: str, path: list[str], sql_definition: str, data_type: Field,
+    def __init__(self, target_name: str, path: list[str], sql_definition: str, field_type: Field,
                  foreign_reference: RelationInfo = None, conversion_function=None,
                  conversion_args=None):
+        """
+        Initalization of the column
+            example in 
+        :param target_name: name the column should get
+        :param path: the path the json needs to be walked in, in order to reach the target value
+        :param sql_definition: The sql data type definition that is going to be executed on the database
+        :param field_type: Describes if the column is pk, fk or none of those
+        :param foreign_reference: The reference of the column to another table using a relationInfo
+        :param conversion_function: the conversion function that's going to be applied to every value read for that
+        field
+        :param conversion_args: Arguments the conversion function is being called with
+        """
         self.target_name = target_name
         self.path = path
         self.sql_definition = sql_definition
-        self.data_type = data_type
+        self.field_type = field_type
         self.foreign_reference = foreign_reference
         self.conversion_function = conversion_function if conversion_function else Conversions.do_nothing
         self.conversion_args = conversion_args if conversion_args else {}
@@ -83,7 +119,7 @@ class Column:
         return False
 
     def __hash__(self):
-        return hash(self.target_name + str(self.path) + self.sql_definition + str(self.data_type))
+        return hash(self.target_name + str(self.path) + self.sql_definition + str(self.field_type))
 
 
 class Relation:
@@ -152,7 +188,7 @@ class Relation:
                     rel_info = rel
                     if other_relations[rel].alias:
                         rel_info = other_relations[rel].alias
-                    if other_col.data_type == Field.PRIMARY_KEY \
+                    if other_col.field_type == Field.PRIMARY_KEY \
                             and f'{rel_info.table}_{other_col.target_name}' not in self.columns:
                         self.columns.append(
                             Column(f'{rel_info.table}_{other_col.target_name}', other_col.path,
@@ -177,23 +213,23 @@ class Relation:
         creation_stmt += f'"{table_name}"(\n'
         for col in self.columns:
             creation_stmt += f'\t"{col.target_name}" {col.sql_definition},\n'
-            pk_count += 1 if col.data_type == Field.PRIMARY_KEY else 0
+            pk_count += 1 if col.field_type == Field.PRIMARY_KEY else 0
         if alias_relations:
             for alias_relation in alias_relations:
                 for col in alias_relation.columns:
                     if col not in self.columns:
                         creation_stmt += f'\t"{col.target_name}" {col.sql_definition},\n'
-                        pk_count += 1 if col.data_type == Field.PRIMARY_KEY else 0
+                        pk_count += 1 if col.field_type == Field.PRIMARY_KEY else 0
         if pk_count > 0:
             creation_stmt += "\tPRIMARY KEY("
             for col in self.columns:
-                if col.data_type == Field.PRIMARY_KEY:
+                if col.field_type == Field.PRIMARY_KEY:
                     creation_stmt += f'"{col.target_name}", '
             if alias_relations:
                 for alias_relation in alias_relations:
                     for col in alias_relation.columns:
                         if col not in self.columns:
-                            if col.data_type == Field.PRIMARY_KEY:
+                            if col.field_type == Field.PRIMARY_KEY:
                                 creation_stmt += f'"{col.target_name}", '
             creation_stmt = creation_stmt[:-2]
             creation_stmt += "),\n"
@@ -217,14 +253,14 @@ class Relation:
         relation_table = relation.alias.table if relation.alias else relation.info.table
         creation_stmt = f'\tFOREIGN KEY ('
         for col in relation.columns:
-            if col.data_type == Field.PRIMARY_KEY:
+            if col.field_type == Field.PRIMARY_KEY:
                 creation_stmt += f'"{appendix}{col.target_name}",'
         creation_stmt = creation_stmt[:-1]
         creation_stmt += f") REFERENCES "
         creation_stmt += f'"{relation_schema}".' if len(relation_schema) else ""
         creation_stmt += f'"{relation_table}" ('
         for col in relation.columns:
-            if col.data_type == Field.PRIMARY_KEY:
+            if col.field_type == Field.PRIMARY_KEY:
                 creation_stmt += f'"{col.target_name}",'
         creation_stmt = creation_stmt[:-1]
         creation_stmt += f"),\n"

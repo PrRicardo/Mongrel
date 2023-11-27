@@ -1,9 +1,37 @@
+"""
+This file contains the conversions used for all the datatypes. Add new conversion functions here.
+example:
+    ...
+    "transfer_options": {
+        "conversion_fields": {
+            "release_date": {
+                "source_type": "string",
+                "target_type": "date",
+                "args": {
+                    "format": "%Y-%m-%d"
+                }
+            }
+        }
+    }
+This configuration will be parsed the following:
+1. The get_conversion method gets called with source_type=string and target_type=date
+2. The returned string_to_date function will be called everytime a release_date field is read with
+val=release_date_value and kwargs={"format": "%Y-%m-%d"}
+3. The converted value is then stored to be written to the database
+"""
 from datetime import datetime
 
 
 class Conversions:
     @staticmethod
     def get_conversion(source_type: str, target_type: str):
+        """
+        This method is used to pick a conversion function for the corresponding data types
+        :param source_type: the source type to convert of off
+        :param target_type: the target data type to convert to
+        :return: return the correct conversion function
+        :raises: NotImplementedError if no correct data conversion can be found
+        """
         if source_type.lower() == "string":
             if target_type.lower() == "date":
                 return Conversions.string_to_date
@@ -11,6 +39,13 @@ class Conversions:
 
     @staticmethod
     def string_to_date(val, **kwargs):
+        """
+        Takes a string and parses it to a date. This is currently pretty hard-coded for the spotify use case and needs
+        to be generified
+        :param val: the value that needs to be converted
+        :param kwargs: these keyword arguments get filled with the args given in the mapping file
+        :return: the converted value
+        """
         if val is None:
             return val
         if len(val) == 4:
@@ -23,4 +58,11 @@ class Conversions:
 
     @staticmethod
     def do_nothing(val, **kwargs):
+        """
+        this is the default value of the conversion functionality, it simplifies the function calling during the
+        transfer
+        :param val: the value
+        :param kwargs: an empty dict
+        :return: just the inital value 🤓
+        """
         return val

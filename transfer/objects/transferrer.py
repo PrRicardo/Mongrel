@@ -139,7 +139,7 @@ class Transferrer:
         flattened = flatten(rel_dict, path_separator=Constants.PATH_SEP)
         for col in relation.columns:
             if col.path:
-                if col.data_type.name != "PRIMARY_KEY":
+                if col.field_type.name != "PRIMARY_KEY":
                     return_values[col.target_name] = [col.conversion_function(val[col.translated_path],
                                                                               **col.conversion_args)
                                                       if col.translated_path in val else None
@@ -188,10 +188,10 @@ class Transferrer:
 
 if __name__ == "__main__":
     relation_builder = RelationBuilder()
-    with open("../configurations/relations.json") as relation_file:
-        with open("../configurations/mappings.json") as mapping_file:
+    with open("../configurations/spotify_relations.json") as relation_file:
+        with open("../configurations/spotify_mappings.json") as mapping_file:
             relations = relation_builder.calculate_relations(json.load(relation_file), json.load(mapping_file))
-    table_builder = TableBuilder(relations, "../configurations/mappings.json")
+    table_builder = TableBuilder(relations, "../configurations/spotify_mappings.json")
     creation_stmt = table_builder.make_creation_script()
     transferrer = Transferrer(table_builder.get_relations(), mongo_host="localhost", mongo_port=27017,
                               mongo_database="hierarchical_relational_test",
