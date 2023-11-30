@@ -181,3 +181,72 @@ value 'PK'.
 
 Let's continue our configuration with a quick look at aliasing. This is required since there are two sources
 for the artists in the source document:
+```json
+{
+  // ...
+  "track": {
+    "album": {
+      "album_type": "album",
+      "artists": [
+        {
+          "external_urls": {
+            "spotify": "https://open.spotify.com/artist/4QQgXkCYTt3BlENzhyNETg"
+          },
+          "href": "https://api.spotify.com/v1/artists/4QQgXkCYTt3BlENzhyNETg",
+          "id": "4QQgXkCYTt3BlENzhyNET  g",
+          "name": "Earth, Wind & Fire",
+          "type": "artist",
+          "uri": "spotify:artist:4QQgXkCYTt3BlENzhyNETg"
+        }
+      ],
+      // ...
+    },
+    "artists": [
+      {
+        "external_urls": {
+          "spotify": "https://open.spotify.com/artist/4QQgXkCYTt3BlENzhyNETg"
+        },
+        "href": "https://api.spotify.com/v1/artists/4QQgXkCYTt3BlENzhyNETg",
+        "id": "4QQgXkCYTt3BlENzhyNETg",
+        "name": "Earth, Wind & Fire",
+        "type": "artist",
+        "uri": "spotify:artist:4QQgXkCYTt3BlENzhyNETg"
+      }
+    ],
+    // ...
+  },
+  // ...
+}
+```
+
+As we can see there are two relevant sections for artist information. That's why we need two different tables to get all
+that information into our relational database and have the relations correctly.
+```json
+{
+  // ...
+  "music.track_artists": {
+    "track.artists.id": "id CHARACTER VARYING(24)",
+    "track.artists.name": "name CHARACTER VARYING(512)",
+    "track.artists.type": "type CHARACTER VARYING(128)",
+    "transfer_options": {
+      "reference_keys": {
+        "id": "PK"
+      },
+      "alias": "music.artists"
+    }
+  },
+  "music.alb_artists": {
+    "track.album.artists.id": "id CHARACTER VARYING(24)",
+    "track.album.artists.name": "name CHARACTER VARYING(512)",
+    "track.album.artists.type": "type CHARACTER VARYING(128)",
+    "transfer_options": {
+      "reference_keys": {
+        "id": "PK"
+      },
+      "alias": "music.artists"
+    }
+  } //...
+}
+```
+We define the two tables with their different paths, but we give them the same alias. The alias combines the two tables
+into one music.artists table. If there is different information on columns or PKs they get combined.
