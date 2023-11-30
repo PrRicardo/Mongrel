@@ -112,10 +112,10 @@ the column definition like in a CREATE-statement.
 {
   "music.album": {
     "track.album.id": "id CHARACTER VARYING (24)",
-    "track.album.name": "album_name CHARACTER VARYING(512)",
-    ...
-  },
-  ...
+    "track.album.name": "album_name CHARACTER VARYING(512)"
+    // ...
+  }
+  // ...
 }
 ```
 
@@ -172,5 +172,12 @@ the source document is a string, we want to convert it to a date though. We can 
 }
 ```
 
-Now that the conversion is declared, every time a value is written to release_date it will get converted through a 
+Now that the conversion is declared, every time a value is written to release_date it will get converted through a
 conversion function.
+Maybe you have already noticed the **reference_keys** section. Here you can define the Primary Key by adding it with the
+value 'PK'.
+
+##### Aliasing
+
+Let's continue our configuration with a quick look at aliasing. This is required since there are two sources
+for the artists in the source document:
