@@ -1,15 +1,15 @@
 {
-  "spotify.tracks": {
+  "music.tracks": {
     "n:1": {
-      "spotify.alben": {
+      "music.album": {
         "n:m": {
-          "spotify.alb_interpret": {}
+          "music.alb_artists": {}
         }
       },
-      "spotify.users": {}
+      "music.users": {}
     },
     "n:m": {
-      "spotify.track_interpret": {}
+      "music.track_artists": {}
     }
   }
 }

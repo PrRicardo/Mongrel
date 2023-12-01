@@ -4,6 +4,56 @@ Hi! Thanks for actually reading the README.md!
 MONGREL is a tool that allows hierarchical datastructures like MongoDB to be ported to relational datastructures like
 PostgreSQL. Currently only these two databases are supported as source and target respectively.
 
+## Requirements
+
+The required Python version is 3.10+. You'll need a source mongo, a target PostgreSQL and two configuration files.
+One configuration file describes the relations of the future target tables (relations.json). The other describes where
+the source information for every target table lies within the source document (mappings.json).    
+Refer to transfer/configurations/ for examples.
+
+## Features
+
+### Defining relations between the source tables
+
+On the relational side, target tables can be in relations with each other. These need to be described manually with
+the help of a relation json-file.
+
+```json relations.json
+{
+  "music.tracks": {
+    // The table name in the relational Database. A schema is optional
+    "n:1": {
+      // All entries in this key have a n:1 relationship on the relational database with music.tracks
+      "music.album": {
+        // Tables in relations can have own relations as well
+        "n:m": {
+          "music.alb_artists": {}
+        }
+      },
+      "music.users": {}
+    },
+    "n:m": {
+      // music.tracks also has n:m relations, in this case only one with track_artists
+      "music.track_artists": {}
+    }
+  }
+}
+```
+
+Every table can have two types of relations.
+
+#### n:1 / 1:n
+
+The common n:1 relation, also used as a 1:1 relation. The n side receives a reference to the 1 side. The reference
+contains every field of the reference table's primary key with the prefix (other table name)_(reference field name).
+In our relations.json example music.tracks will have the fields users_id and users_type since the primary key of
+music.users is composite.
+
+#### n:m / m:n
+
+The m:n relation implies the existence of a helper table. If no helper table exists yet, using a n:m relation creates a
+helper table automatically with the
+
 ## Practical Example
 
 In our example we need to transfer information about my Spotify playlists into a PostgreSQL database.
@@ -12,9 +62,10 @@ In our example we need to transfer information about my Spotify playlists into a
 
 #### Relations
 
-First we need a configuration file, that mirrors the relations of the entities we are about to create.
+First we need a configuration file, that mirrors the relations of the tables we want to have in our target database
+after the transfer is done.
 
-```json
+```json relations.json
 {
   "music.tracks": {
     "n:1": {
@@ -32,16 +83,16 @@ First we need a configuration file, that mirrors the relations of the entities w
 }
 ```
 
-We defined a lot of entities here, let's get over every single one of them.
-**music.tracks:**
+We defined a lot of entities here, let's get over every single one of them.     
+**music.tracks:**      
 The track table has three relations. Two of those are n:1 relations. This means that the finished track table is going
 to have an album_id to reference music.album and an users_id which references music.users. Foreign Key constraints will
-be created on the database.
+be created on the database.      
 The last relation is an n:m relation to music.track_artists. This implies the creation of a helper table to map this
 relation correctly. The helper table will be named music.tracks2track_artists. (In our example it
 will be just music.tracks2artists, but we'll get to that later.)
 
-**music.album:**
+**music.album:**      
 This table has two relations. The n:m relation is created like in music.tracks with adjusted naming and references.
 However, we need to look at the relation to music.tracks. Since music.tracks has an n:1 to music.album, the relation
 is inverted for music.album. This means that music.album has an 1:n relation to music.tracks which does not require any
@@ -181,6 +232,7 @@ value 'PK'.
 
 Let's continue our configuration with a quick look at aliasing. This is required since there are two sources
 for the artists in the source document:
+
 ```json
 {
   // ...
@@ -198,7 +250,7 @@ for the artists in the source document:
           "type": "artist",
           "uri": "spotify:artist:4QQgXkCYTt3BlENzhyNETg"
         }
-      ],
+      ]
       // ...
     },
     "artists": [
@@ -212,15 +264,16 @@ for the artists in the source document:
         "type": "artist",
         "uri": "spotify:artist:4QQgXkCYTt3BlENzhyNETg"
       }
-    ],
+    ]
     // ...
-  },
+  }
   // ...
 }
 ```
 
 As we can see there are two relevant sections for artist information. That's why we need two different tables to get all
 that information into our relational database and have the relations correctly.
+
 ```json
 {
   // ...
@@ -245,8 +298,10 @@ that information into our relational database and have the relations correctly.
       },
       "alias": "music.artists"
     }
-  } //...
+  }
+  //...
 }
 ```
+
 We define the two tables with their different paths, but we give them the same alias. The alias combines the two tables
 into one music.artists table. If there is different information on columns or PKs they get combined.

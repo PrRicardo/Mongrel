@@ -1,5 +1,5 @@
 {
-  "spotify.alben": {
+  "music.album": {
     "track.album.id": "id CHARACTER VARYING (24)",
     "track.album.name": "album_name CHARACTER VARYING(512)",
     "track.album.album_type": "album_type CHARACTER VARYING(32)",
@@ -20,7 +20,7 @@
       }
     }
   },
-  "spotify.track_interpret": {
+  "music.track_artists": {
     "track.artists.id": "id CHARACTER VARYING(24)",
     "track.artists.name": "name CHARACTER VARYING(512)",
     "track.artists.type": "type CHARACTER VARYING(128)",
@@ -28,10 +28,10 @@
       "reference_keys": {
         "id": "PK"
       },
-      "alias": "spotify.interpret"
+      "alias": "music.interpret"
     }
   },
-  "spotify.alb_interpret": {
+  "music.alb_artists": {
     "track.album.artists.id": "id CHARACTER VARYING(24)",
     "track.album.artists.name": "name CHARACTER VARYING(512)",
     "track.album.artists.type": "type CHARACTER VARYING(128)",
@@ -39,10 +39,10 @@
       "reference_keys": {
         "id": "PK"
       },
-      "alias": "spotify.interpret"
+      "alias": "music.interpret"
     }
   },
-  "spotify.tracks": {
+  "music.tracks": {
     "track.id": "id CHARACTER VARYING(24)",
     "track.name": "name CHARACTER VARYING(512)",
     "track.popularity": "popularity INTEGER",
@@ -54,7 +54,7 @@
       }
     }
   },
-  "spotify.users": {
+  "music.users": {
     "added_by.id": "id CHARACTER VARYING(512)",
     "added_by.type": "type CHARACTER VARYING(128)",
     "transfer_options": {
