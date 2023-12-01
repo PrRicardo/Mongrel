@@ -23,7 +23,8 @@ the help of a relation json-file.
   "music.tracks": {
     // The table name in the relational Database. A schema is optional
     "n:1": {
-      // All entries in this key have a n:1 relationship on the relational database with music.tracks
+      // All entries in this key have a n:1 relationship on the 
+      // relational database with music.tracks
       "music.album": {
         // Tables in relations can have own relations as well
         "n:m": {
@@ -47,12 +48,29 @@ Every table can have two types of relations.
 The common n:1 relation, also used as a 1:1 relation. The n side receives a reference to the 1 side. The reference
 contains every field of the reference table's primary key with the prefix (other table name)_(reference field name).
 In our relations.json example music.tracks will have the fields users_id and users_type since the primary key of
-music.users is composite.
+music.users is composite of id and type.
 
 #### n:m / m:n
 
 The m:n relation implies the existence of a helper table. If no helper table exists yet, using a n:m relation creates a
-helper table automatically with the
+helper table automatically with the primary keys of the two connected tables. Internally a table is created which has
+a 1:n relation to both tables. If you want to use your own helper table, you can do so by writing a config like this.
+
+```json relations.json
+{
+  "schema.left_table": {
+    "1:n": {
+      "schema.linking_table": {
+        "n:1": {
+          "schema.right_table": {}
+        }
+      }
+    }
+  }
+}
+```
+
+### Defining the 
 
 ## Practical Example
 
