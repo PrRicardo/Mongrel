@@ -13,6 +13,9 @@ Refer to transfer/configurations/ for examples.
 
 ## Features
 
+MONGREL is able to not only able to transfer the data. It understands foreign key relations and respects them during
+writing. It is also able to write into an empty database since it creates the required tables automatically.
+
 ### Defining relations between the source tables
 
 On the relational side, target tables can be in relations with each other. These need to be described manually with
@@ -70,7 +73,64 @@ a 1:n relation to both tables. If you want to use your own helper table, you can
 }
 ```
 
-### Defining the 
+### Mapping Configuration
+
+```json mappings.json
+{
+  "music.album": {
+    "track.album.id": "id CHARACTER VARYING (24)",
+    "track.album.name": "album_name CHARACTER VARYING(511)",
+    "track.album.album_type": "album_type CHARACTER VARYING(31)",
+    "track.album.release_date": "release_date DATE",
+    "track.album.total_tracks": "total_tracks INTEGER",
+    "transfer_options": {
+      "conversion_fields": {
+        "release_date": {
+          "source_type": "string",
+          "target_type": "date",
+          "args": {
+            "format": "%Y-%m-%d"
+          }
+        }
+      },
+      "reference_keys": {
+        "id": "PK"
+      }
+    }
+  }
+}
+```
+
+#### Defining the source and target fields
+
+With the second configuration file, the mapping of target and source fields need to be described. The configuration
+works as follows:
+
+1. The most outer bracket describes the name on the target system. The format is SCHEMA.TABLE. In our example
+   music.album.
+2. The key of an entry describes the path one must walk through the json to reach the correct value. The value
+   seperator is '.'.    
+   Example: If we want to get the id field of the album in our example document, the values we must access are track,
+   then
+   album, then id. The key value is therefore track.album.id.
+3. The value describes the name and sql definition on the target system. These resemble CREATE-SQL syntax because they
+   are use as-is in the creation statement on the target database.
+
+#### Transfer options
+The reserved key "transfer_options" is used to store information about the transfer itself.     
+
+##### conversion_fields
+With the keyword "conversion_fields", fields can be defined that need to have a conversion function. In our example we 
+are converting a string to a date. With the fields "source_type" and "target_type" we define which conversion function 
+should be used. The arguments given in "args" are given as keywords arguments to the conversion function. New conversion
+functions can be added in transfer/helpers/conversions.py. Don't forget to add your new conversion method in 
+get_conversion as well!
+
+##### reference_keys
+With the keyword "reference_keys", fields can be defined that have special roles in the transfer. Currently only primary
+keys are supported and foreign keys are inferred automatically. In our example we have only one ID-Field as a primary
+key, however composites are possible!
+
 
 ## Practical Example
 
@@ -148,8 +208,8 @@ tables.
 {
   "music.album": {
     "track.album.id": "id CHARACTER VARYING (24)",
-    "track.album.name": "album_name CHARACTER VARYING(512)",
-    "track.album.album_type": "album_type CHARACTER VARYING(32)",
+    "track.album.name": "album_name CHARACTER VARYING(511)",
+    "track.album.album_type": "album_type CHARACTER VARYING(31)",
     "track.album.release_date": "release_date DATE",
     "track.album.total_tracks": "total_tracks INTEGER",
     "transfer_options": {
@@ -181,7 +241,7 @@ the column definition like in a CREATE-statement.
 {
   "music.album": {
     "track.album.id": "id CHARACTER VARYING (24)",
-    "track.album.name": "album_name CHARACTER VARYING(512)"
+    "track.album.name": "album_name CHARACTER VARYING(511)"
     // ...
   }
   // ...
@@ -297,8 +357,8 @@ that information into our relational database and have the relations correctly.
   // ...
   "music.track_artists": {
     "track.artists.id": "id CHARACTER VARYING(24)",
-    "track.artists.name": "name CHARACTER VARYING(512)",
-    "track.artists.type": "type CHARACTER VARYING(128)",
+    "track.artists.name": "name CHARACTER VARYING(511)",
+    "track.artists.type": "type CHARACTER VARYING(127)",
     "transfer_options": {
       "reference_keys": {
         "id": "PK"
@@ -308,8 +368,8 @@ that information into our relational database and have the relations correctly.
   },
   "music.alb_artists": {
     "track.album.artists.id": "id CHARACTER VARYING(24)",
-    "track.album.artists.name": "name CHARACTER VARYING(512)",
-    "track.album.artists.type": "type CHARACTER VARYING(128)",
+    "track.album.artists.name": "name CHARACTER VARYING(511)",
+    "track.album.artists.type": "type CHARACTER VARYING(127)",
     "transfer_options": {
       "reference_keys": {
         "id": "PK"
@@ -317,7 +377,7 @@ that information into our relational database and have the relations correctly.
       "alias": "music.artists"
     }
   }
-  //...
+  // ...
 }
 ```
 

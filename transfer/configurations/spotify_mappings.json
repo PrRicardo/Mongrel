@@ -1,8 +1,8 @@
 {
   "music.album": {
     "track.album.id": "id CHARACTER VARYING (24)",
-    "track.album.name": "album_name CHARACTER VARYING(512)",
-    "track.album.album_type": "album_type CHARACTER VARYING(32)",
+    "track.album.name": "album_name CHARACTER VARYING(511)",
+    "track.album.album_type": "album_type CHARACTER VARYING(31)",
     "track.album.release_date": "release_date DATE",
     "track.album.total_tracks": "total_tracks INTEGER",
     "transfer_options": {
@@ -22,8 +22,8 @@
   },
   "music.track_artists": {
     "track.artists.id": "id CHARACTER VARYING(24)",
-    "track.artists.name": "name CHARACTER VARYING(512)",
-    "track.artists.type": "type CHARACTER VARYING(128)",
+    "track.artists.name": "name CHARACTER VARYING(511)",
+    "track.artists.type": "type CHARACTER VARYING(127)",
     "transfer_options": {
       "reference_keys": {
         "id": "PK"
@@ -33,8 +33,8 @@
   },
   "music.alb_artists": {
     "track.album.artists.id": "id CHARACTER VARYING(24)",
-    "track.album.artists.name": "name CHARACTER VARYING(512)",
-    "track.album.artists.type": "type CHARACTER VARYING(128)",
+    "track.album.artists.name": "name CHARACTER VARYING(511)",
+    "track.album.artists.type": "type CHARACTER VARYING(127)",
     "transfer_options": {
       "reference_keys": {
         "id": "PK"
@@ -44,7 +44,7 @@
   },
   "music.tracks": {
     "track.id": "id CHARACTER VARYING(24)",
-    "track.name": "name CHARACTER VARYING(512)",
+    "track.name": "name CHARACTER VARYING(511)",
     "track.popularity": "popularity INTEGER",
     "track.track_number": "track_number INTEGER",
     "track.type": "type CHARACTER VARYING",
@@ -55,8 +55,8 @@
     }
   },
   "music.users": {
-    "added_by.id": "id CHARACTER VARYING(512)",
-    "added_by.type": "type CHARACTER VARYING(128)",
+    "added_by.id": "id CHARACTER VARYING(511)",
+    "added_by.type": "type CHARACTER VARYING(127)",
     "transfer_options": {
       "reference_keys": {
         "id": "PK",
