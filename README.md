@@ -49,7 +49,7 @@ Here is an example document to follow the documentation with.
     "name": "Loose Change",
     "popularity": 60,
     "track_number": 7,
-    "type": "track",
+    "type": "track"
   }
 }
 ```
