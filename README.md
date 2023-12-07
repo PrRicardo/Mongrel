@@ -15,6 +15,45 @@ Refer to transfer/configurations/ for examples.
 
 MONGREL is able to not only able to transfer the data. It understands foreign key relations and respects them during
 writing. It is also able to write into an empty database since it creates the required tables automatically.
+Here is an example document to follow the documentation with.
+```json
+{
+  "added_by": {
+    "id": "ME",
+    "type": "user"
+  },
+  "track": {
+    "album": {
+      "album_type": "album",
+      "artists": [
+        {
+          "id": "2S5hlvw4CMtMGswFtfdK15",
+          "name": "Royal Blood",
+          "type": "artist"
+        }
+      ],
+      "id": "0BFzNaeaNv4mahOzwZFGHK",
+      "name": "Royal Blood",
+      "release_date": "2014-08-22",
+      "total_tracks": 10,
+      "type": "album"
+    },
+    "artists": [
+      {
+        "id": "2S5hlvw4CMtMGswFtfdK15",
+        "name": "Royal Blood",
+        "type": "artist"
+      }
+    ],
+    "id": "48wDtXGVFNZHANlDYTKMAW",
+    "name": "Loose Change",
+    "popularity": 60,
+    "track_number": 7,
+    "type": "track",
+  }
+}
+```
+
 
 ### Defining relations between the source tables
 
@@ -109,10 +148,9 @@ works as follows:
 1. The most outer bracket describes the name on the target system. The format is SCHEMA.TABLE. In our example
    music.album.
 2. The key of an entry describes the path one must walk through the json to reach the correct value. The value
-   seperator is '.'.    
+   seperator is the dot character.    
    Example: If we want to get the id field of the album in our example document, the values we must access are track,
-   then
-   album, then id. The key value is therefore track.album.id.
+   then album, then id. The key value is therefore track.album.id.
 3. The value describes the name and sql definition on the target system. These resemble CREATE-SQL syntax because they
    are use as-is in the creation statement on the target database.
 
