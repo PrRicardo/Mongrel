@@ -1,7 +1,7 @@
 # MONGREL - MONgodb Going RELational
 
 <p align="center" width="100%">
-    <img src="_img/Mongrel_wide_smol.png"> 
+    <img src="../../../Privat/projekt_db/hierarchical-to-relational/_img/Mongrel_wide_smol.png"> 
 </p>
 Hi! Thanks for actually reading the README.md!
 MONGREL is a tool that allows hierarchical datastructures like MongoDB to be ported to relational datastructures like
