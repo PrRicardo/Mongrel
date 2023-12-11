@@ -2,9 +2,9 @@
 This file contains the main logic for the objects in the transfers.
 """
 import pandas as pd
-from transfer.helpers.constants import Constants
-from transfer.helpers.conversions import Conversions
-from transfer.helpers.exceptions import MalformedMappingException
+from mongrel.helpers.constants import Constants
+from mongrel.helpers.conversions import Conversions
+from mongrel.helpers.exceptions import MalformedMappingException
 from enum import Enum
 
 
@@ -78,7 +78,7 @@ class Column:
     translated_path: str
     sql_definition: str
     field_type: Field
-    foreign_reference: RelationInfo | None
+    foreign_reference: RelationInfo
     conversion_args: dict
 
     def __init__(self, target_name: str, path: list[str], sql_definition: str, field_type: Field,
@@ -142,7 +142,7 @@ class Relation:
     relations: dict[str, list[RelationInfo]]
     columns: list[Column]
     prepped: bool
-    alias: RelationInfo | None
+    alias: RelationInfo
 
     def __init__(self, info, options: dict = None):
         """
@@ -236,14 +236,14 @@ class Relation:
                                    Field.PRIMARY_KEY if fk_are_pk else Field.FOREIGN_KEY, rel_info))
         self.prepped = True
 
-    def get_alias_relations(self, other_relations: list) -> list | None:
+    def get_alias_relations(self, other_relations: list) -> list:
         """
         Fetch all relations that have the same alias as this relation
         :param other_relations: a list containing all relation objects
         :return: a list of all other relations with alias == self.alias or None
         """
         if not self.alias:
-            return None
+            return []
         return [kek for kek in other_relations if
                 kek.alias == self.alias and kek != self]
 
@@ -402,7 +402,7 @@ class Relation:
             col_val = col_val.strip()
             return splittie[0], col_val
 
-        def parse_column_references(key_val: str | dict):
+        def parse_column_references(key_val):
             if isinstance(key_val, str) and key_val.strip().startswith('PK'):
                 return Field.PRIMARY_KEY, None
             if isinstance(key_val, dict):

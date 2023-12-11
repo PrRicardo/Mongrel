@@ -63,12 +63,11 @@ the help of a relation json-file.
 ```json relations.json
 {
   "music.tracks": {
-    // The table name in the relational Database. A schema is optional
+    "_comment": "The table name in the relational Database. A schema is optional",
     "n:1": {
-      // All entries in this key have a n:1 relationship on the 
-      // relational database with music.tracks
+      "_comment": "All entries in this key have a n:1 relationship on the relational database with music.tracks",
       "music.album": {
-        // Tables in relations can have own relations as well
+        "_comment":"Tables in relations can have own relations as well",
         "n:m": {
           "music.alb_artists": {}
         }
@@ -76,7 +75,7 @@ the help of a relation json-file.
       "music.users": {}
     },
     "n:m": {
-      // music.tracks also has n:m relations, in this case only one with track_artists
+      "_comment": "music.tracks also has n:m relations, in this case only one with track_artists",
       "music.track_artists": {}
     }
   }
@@ -89,13 +88,13 @@ Every table can have two types of relations.
 
 The common n:1 relation, also used as a 1:1 relation. The n side receives a reference to the 1 side. The reference
 contains every field of the reference table's primary key with the prefix (other table name)_(reference field name).
-In our relations.json example music.tracks will have the fields users_id and users_type since the primary key of
+In our relations.json example, music.tracks will have the fields users_id and users_type since the primary key of
 music.users is composite of id and type.
 
 #### n:m / m:n
 
 The m:n relation implies the existence of a helper table. If no helper table exists yet, using a n:m relation creates a
-helper table automatically with the primary keys of the two connected tables. Internally a table is created which has
+helper table automatically, with the primary keys of the two connected tables. Internally a table is created which has
 a 1:n relation to both tables. If you want to use your own helper table, you can do so by writing a config like this.
 
 ```json relations.json
@@ -152,7 +151,7 @@ works as follows:
    Example: If we want to get the id field of the album in our example document, the values we must access are track,
    then album, then id. The key value is therefore track.album.id.
 3. The value describes the name and sql definition on the target system. These resemble CREATE-SQL syntax because they
-   are use as-is in the creation statement on the target database.
+   are used as-is in the creation statement on the target database.
 
 #### Transfer options
 The reserved key "transfer_options" is used to store information about the transfer itself.     
@@ -222,19 +221,14 @@ configuration file.
 ```json
 {
   "music.album": {
-    // ...
   },
   "music.track_artists": {
-    // ...
   },
   "music.alb_artists": {
-    // ...
   },
   "music.tracks": {
-    // ...
   },
   "music.users": {
-    // ...
   }
 }
 ```
@@ -265,7 +259,6 @@ tables.
       }
     }
   }
-  // ...
 }
 ```
 
@@ -280,9 +273,7 @@ the column definition like in a CREATE-statement.
   "music.album": {
     "track.album.id": "id CHARACTER VARYING (24)",
     "track.album.name": "album_name CHARACTER VARYING(511)"
-    // ...
   }
-  // ...
 }
 ```
 
@@ -295,7 +286,7 @@ Here's a cutout of one source document for reference:
       "album_type": "album",
       "artists": [
         {
-          // Here's the data for alb_artists btw.
+          "_comment": "Here's the data for alb_artists btw."
         }
       ],
       "href": "https://api.spotify.com/v1/albums/1hj1SYbJYdXloRiSjsCLXg",
@@ -307,7 +298,6 @@ Here's a cutout of one source document for reference:
       "type": "album",
       "uri": "spotify:album:1hj1SYbJYdXloRiSjsCLXg"
     }
-    // ...
   }
 }
 ```
@@ -319,7 +309,6 @@ the source document is a string, we want to convert it to a date though. We can 
 ```json
 {
   "music.album": {
-    // ...
     "transfer_options": {
       "conversion_fields": {
         "release_date": {
@@ -335,7 +324,6 @@ the source document is a string, we want to convert it to a date though. We can 
       }
     }
   }
-  // ...
 }
 ```
 
@@ -351,7 +339,6 @@ for the artists in the source document:
 
 ```json
 {
-  // ...
   "track": {
     "album": {
       "album_type": "album",
@@ -367,7 +354,6 @@ for the artists in the source document:
           "uri": "spotify:artist:4QQgXkCYTt3BlENzhyNETg"
         }
       ]
-      // ...
     },
     "artists": [
       {
@@ -381,9 +367,7 @@ for the artists in the source document:
         "uri": "spotify:artist:4QQgXkCYTt3BlENzhyNETg"
       }
     ]
-    // ...
   }
-  // ...
 }
 ```
 
@@ -392,7 +376,6 @@ that information into our relational database and have the relations correctly.
 
 ```json
 {
-  // ...
   "music.track_artists": {
     "track.artists.id": "id CHARACTER VARYING(24)",
     "track.artists.name": "name CHARACTER VARYING(511)",
@@ -415,9 +398,23 @@ that information into our relational database and have the relations correctly.
       "alias": "music.artists"
     }
   }
-  // ...
 }
 ```
 
 We define the two tables with their different paths, but we give them the same alias. The alias combines the two tables
 into one music.artists table. If there is different information on columns or PKs they get combined.
+
+
+### Running
+
+```python
+import os
+from mongrel import transfer_data_from_mongo_to_postgres
+
+if __name__ == "__main__":
+   transfer_data_from_mongo_to_postgres("../configurations/spotify_relations.json",
+                                        "../configurations/spotify_mappings.json", mongo_host="localhost",
+                                        mongo_database="hierarchical_relational_test", mongo_collection="test_tracks",
+                                        sql_host='127.0.0.1', sql_database='ricardo', sql_user='ricardo',
+                                        sql_port=5432, sql_password=os.getenv("PASSWORD"))
+```

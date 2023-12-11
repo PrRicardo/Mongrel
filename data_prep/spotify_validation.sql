@@ -1,17 +1,17 @@
 with artists as (
 	SELECT id, to_json(json_build_object('id',id,'name',name,'type',type)) as data
-	FROM spotify.interpret
+	FROM music.interpret
 	GROUP BY 1
 ),
 track2artists as (
 	SELECT tracks_id, json_agg(a.data) as artists
-	FROM spotify.tracks2interpret t2i
+	FROM music.tracks2interpret t2i
 	LEFT JOIN artists as a on t2i.interpret_id = a.id
 	GROUP BY 1
 ),
 album2artists as (
-	SELECT alben_id, json_agg(a.data) as artists
-	FROM spotify.alben2interpret t2i
+	SELECT album_id, json_agg(a.data) as artists
+	FROM music.album2interpret t2i
 	LEFT JOIN artists as a on t2i.interpret_id = a.id
 	GROUP BY 1
 ),
@@ -26,10 +26,10 @@ track as (
 			'artists', a2a.artists
 		)) as album,
 		t2a.artists
-	FROM spotify.tracks tra
+	FROM music.tracks tra
 	LEFT JOIN track2artists t2a on t2a.tracks_id = tra.id
-	LEFT JOIN spotify.alben alb on alb.id = tra.alben_id
-	LEFT JOIN album2artists a2a on alb.id = a2a.alben_id
+	LEFT JOIN music.album alb on alb.id = tra.album_id
+	LEFT JOIN album2artists a2a on alb.id = a2a.album_id
 ),
 aggregated as (
 	SELECT
@@ -47,7 +47,7 @@ aggregated as (
 			'artists',tra.artists
 		)) as track
 	FROM track tra
-	LEFT JOIN spotify.users usr on tra.users_id = usr.id and tra.users_type = usr.type
+	LEFT JOIN music.users usr on tra.users_id = usr.id and tra.users_type = usr.type
 )
 SELECT
 	to_json(json_build_object(
