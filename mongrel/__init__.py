@@ -1,0 +1,1 @@
+from .objects.transferrer import transfer_data_from_mongo_to_postgres

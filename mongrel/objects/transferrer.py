@@ -3,13 +3,12 @@ Transfer Logic can be found here
 """
 import os
 
-from transfer.helpers.MapFlattener import flatten
-from transfer.helpers.constants import Constants
-from transfer.helpers.exceptions import MalformedMappingException
-from transfer.objects.relation import Relation, RelationInfo
-from transfer.objects.relation_builder import RelationBuilder
-from transfer.objects.table_builder import TableBuilder
-from transfer.helpers.database_functions import DatabaseFunctions
+from mongrel.helpers.MapFlattener import flatten
+from mongrel.helpers.constants import Constants
+from mongrel.objects.relation import Relation, RelationInfo
+from mongrel.objects.relation_builder import RelationBuilder
+from mongrel.objects.table_builder import TableBuilder
+from mongrel.helpers.database_functions import DatabaseFunctions
 from sqlalchemy import create_engine, URL, text
 import json
 import pandas as pd

@@ -1,0 +1,15 @@
+{
+  "music.tracks": {
+    "n:1": {
+      "music.album": {
+        "n:m": {
+          "music.alb_artists": {}
+        }
+      },
+      "music.users": {}
+    },
+    "n:m": {
+      "music.track_artists": {}
+    }
+  }
+}
