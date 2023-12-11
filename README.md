@@ -8,7 +8,7 @@ PostgreSQL. Currently only these two databases are supported as source and targe
 
 ## Requirements
 
-The required Python version is 3.10+. You'll need a source mongo, a target PostgreSQL and two configuration files.
+The supported Python version is 3.10+. You'll need a source mongo, a target PostgreSQL and two configuration files.
 One configuration file describes the relations of the future target tables (relations.json). The other describes where
 the source information for every target table lies within the source document (mappings.json).    
 Refer to transfer/configurations/ for examples.
