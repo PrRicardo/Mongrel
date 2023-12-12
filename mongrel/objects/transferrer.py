@@ -1,7 +1,11 @@
 """
 Transfer Logic can be found here
 """
-import os
+import json
+from sqlalchemy import create_engine, URL, text
+import pandas as pd
+import pymongo
+from tqdm import tqdm
 
 from mongrel.helpers.map_flattener import flatten
 from mongrel.helpers.constants import PATH_SEP
@@ -9,14 +13,12 @@ from mongrel.objects.relation import Relation, RelationInfo
 from mongrel.objects.relation_builder import RelationBuilder
 from mongrel.objects.table_builder import TableBuilder
 from mongrel.helpers.database_functions import insert_on_conflict_nothing
-from sqlalchemy import create_engine, URL, text
-import json
-import pandas as pd
-import pymongo
-from tqdm import tqdm
 
 
 class Transferrer:
+    """
+    The main class that handles the transfer
+    """
     dependencies: dict[RelationInfo, list[RelationInfo]]
     batch_size: int
     relations: list[Relation]
@@ -55,7 +57,7 @@ class Transferrer:
         self.dependencies = Transferrer.create_dependencies(relation_list)
         self.relations = relation_list
         self.batch_size = batch_size
-        self.length_lookup = dict()
+        self.length_lookup = {}
 
     def prepare_database(self, creation_script: str) -> None:
         """
@@ -120,13 +122,12 @@ class Transferrer:
                         if len(col.path) > layer and key == col.path[layer]:
                             rel_dict[key] = self.filter_dict(doc[key], relation, layer + 1)
             return rel_dict
-        elif isinstance(doc, list):
+        if isinstance(doc, list):
             vals = []
             for entry in doc:
                 vals.append(self.filter_dict(entry, relation, layer))
             return vals
-        else:
-            return doc
+        return doc
 
     def read_document_lines(self, doc: dict, relation: Relation) -> dict:
         """
@@ -135,7 +136,7 @@ class Transferrer:
         :param relation: the relation that uses the information
         :return: the values as a dict for the columns
         """
-        return_values = dict()
+        return_values = {}
         rel_dict = self.filter_dict(doc, relation)
         flattened = flatten(rel_dict, path_separator=PATH_SEP)
         for col in relation.columns:
@@ -229,11 +230,3 @@ def transfer_data_from_mongo_to_postgres(relation_config_path: str, mapping_conf
                               batch_size)
     transferrer.prepare_database(creation_stmt)
     transferrer.transfer_data()
-
-
-if __name__ == "__main__":
-    transfer_data_from_mongo_to_postgres("../configurations/spotify_relations.json",
-                                         "../configurations/spotify_mappings.json", mongo_host="localhost",
-                                         mongo_database="hierarchical_relational_test", mongo_collection="test_tracks",
-                                         sql_host='127.0.0.1', sql_database='ricardo', sql_user='ricardo',
-                                         sql_port=5432, sql_password=os.getenv("PASSWORD"))

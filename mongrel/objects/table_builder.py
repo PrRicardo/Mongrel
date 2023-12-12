@@ -9,6 +9,10 @@ from mongrel.objects.relation_builder import RelationBuilder
 
 
 class TableBuilder:
+    """
+    This class builds the creation statement of the database and manages some of the relations mentioned in the config
+    and relation_builder
+    """
     _relations: list[Relation]
     _rel_dict: dict
 
@@ -20,8 +24,8 @@ class TableBuilder:
         """
         self._relations = relations_vals
         self._rel_dict = self.prepare_rel_dict()
-        with open(relation_file_path) as relation_file:
-            self.add_columns_to_relations(json.load(relation_file))
+        with open(relation_file_path) as relation_file_inner:
+            self.add_columns_to_relations(json.load(relation_file_inner))
         self._relations = self._prepare_nm_relations(relations_vals)
 
     def get_relations(self):
@@ -142,13 +146,3 @@ class TableBuilder:
                 raise MalformedMappingException("There are cycles in the n:1 relations and therefore "
                                                 "no foreign key could be generated.")
         return creation_stmt_inner
-
-
-if __name__ == "__main__":
-    relation_builder = RelationBuilder()
-    with open("configurations/relations.json") as relation_file:
-        with open("configurations/mappings.json") as mapping_file:
-            relations = relation_builder.calculate_relations(json.load(relation_file), json.load(mapping_file))
-    table_builder = TableBuilder(relations, "configurations/mappings.json")
-    creation_stmt = table_builder.make_creation_script()
-    pass

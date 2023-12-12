@@ -7,6 +7,10 @@ from ..helpers.constants import TRAN_OPTIONS
 
 
 class RelationBuilder:
+    """
+    This class builds and manages the relations created from the config files
+    """
+
     @staticmethod
     def walk_paths(json_tracks: dict) -> list:
         """
@@ -121,10 +125,3 @@ class RelationBuilder:
             parsed_rel, parsed_val = parse_right(idx, relation_list)
             relation.append((str(parsed_rel), str(parsed_val)))
         return relation
-
-
-if __name__ == '__main__':
-    builder = RelationBuilder()
-    with open("../configurations/relations.json") as relation_file:
-        with open("../configurations/mappings.json") as mapping_file:
-            relations = builder.calculate_relations(json.load(relation_file), json.load(mapping_file))
