@@ -344,7 +344,7 @@ class Relation:
         return creation_stmt
 
     @staticmethod
-    def make_foreign_key(relation, appendix: str = ""):
+    def make_foreign_key(relation:object, appendix: str = ""):
         """
         writes a single foreign key
         :param relation: the relation that is used as the foreign key base

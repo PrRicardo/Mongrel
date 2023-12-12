@@ -23,7 +23,7 @@ class TableBuilder:
         """
         self._relations = relations_vals
         self._rel_dict = self.prepare_rel_dict()
-        with open(relation_file_path, "utf8") as relation_file_inner:
+        with open(relation_file_path, encoding="utf8") as relation_file_inner:
             self.add_columns_to_relations(json.load(relation_file_inner))
         self._relations = self._prepare_nm_relations(relations_vals)
 
