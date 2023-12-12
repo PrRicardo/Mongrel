@@ -1,12 +1,15 @@
 """
 manages the creation of tables and their relations from the configuration file
 """
-import json
 from .relation import Relation, RelationInfo
-from ..helpers.constants import Constants
+from ..helpers.constants import TRAN_OPTIONS
 
 
 class RelationBuilder:
+    """
+    This class builds and manages the relations created from the config files
+    """
+
     @staticmethod
     def walk_paths(json_tracks: dict) -> list:
         """
@@ -52,7 +55,7 @@ class RelationBuilder:
         return relation_lists
 
     @staticmethod
-    def fetch_unique_relations(relation_lists, mapping_dict):
+    def fetch_unique_relations(relation_lists: list, mapping_dict: dict):
         """
         Puts all relations in a list as Relation objects
         :param relation_lists: all unique relations in the configuration file
@@ -64,8 +67,8 @@ class RelationBuilder:
             for idx, val in enumerate(relation_list):
                 if idx % 2 == 0:
                     if RelationInfo(val) not in relations:
-                        if Constants.TRAN_OPTIONS in mapping_dict[val]:
-                            relations.append(Relation(RelationInfo(val), mapping_dict[val][Constants.TRAN_OPTIONS]))
+                        if TRAN_OPTIONS in mapping_dict[val]:
+                            relations.append(Relation(RelationInfo(val), mapping_dict[val][TRAN_OPTIONS]))
                         else:
                             relations.append(Relation(RelationInfo(val)))
         return relations
@@ -121,10 +124,3 @@ class RelationBuilder:
             parsed_rel, parsed_val = parse_right(idx, relation_list)
             relation.append((str(parsed_rel), str(parsed_val)))
         return relation
-
-
-if __name__ == '__main__':
-    builder = RelationBuilder()
-    with open("../configurations/relations.json") as relation_file:
-        with open("../configurations/mappings.json") as mapping_file:
-            relations = builder.calculate_relations(json.load(relation_file), json.load(mapping_file))

@@ -1,11 +1,12 @@
 """
 This file contains the main logic for the objects in the transfers.
 """
+from enum import Enum
 import pandas as pd
-from mongrel.helpers.constants import Constants
+from mongrel.helpers.constants import PATH_SEP, CONVERSION_FIELDS, ALIAS, CONV_ARGS, REFERENCE_KEY, TRAN_OPTIONS, \
+    TARGET_TYPE, SOURCE_TYPE
 from mongrel.helpers.conversions import Conversions
 from mongrel.helpers.exceptions import MalformedMappingException
-from enum import Enum
 
 
 class Field(Enum):
@@ -106,7 +107,7 @@ class Column:
         self.translated_path = ''
         if path is not None:
             for sub_path in path:
-                self.translated_path += sub_path + Constants.PATH_SEP
+                self.translated_path += sub_path + PATH_SEP
             self.translated_path = self.translated_path[:-1]
 
     def __eq__(self, other):
@@ -156,7 +157,7 @@ class Relation:
         self.prepped = False
         if options is None:
             options = {}
-        self.alias = RelationInfo(options[Constants.ALIAS]) if Constants.ALIAS in options else None
+        self.alias = RelationInfo(options[ALIAS]) if ALIAS in options else None
 
     def __eq__(self, other):
         """
@@ -198,23 +199,23 @@ class Relation:
             else:
                 self.relations[key] = [RelationInfo(val)]
 
-    def parse_column_dict(self, rel_dict) -> None:
+    def parse_column_dict(self, rel_dict: dict) -> None:
         """
         Adds the columns to the class, parsing their conversion functions if necessary
         :param rel_dict: The dictionary of relevant column information
         """
         for key, value in rel_dict.items():
-            if key != Constants.TRAN_OPTIONS:
-                if Constants.TRAN_OPTIONS in rel_dict:
-                    options = rel_dict[Constants.TRAN_OPTIONS]
+            if key != TRAN_OPTIONS:
+                if TRAN_OPTIONS in rel_dict:
+                    options = rel_dict[TRAN_OPTIONS]
                     self.add_column(key, value,
-                                    options[Constants.REFERENCE_KEY] if Constants.REFERENCE_KEY in options else None,
+                                    options[REFERENCE_KEY] if REFERENCE_KEY in options else None,
                                     options[
-                                        Constants.CONVERSION_FIELDS] if Constants.CONVERSION_FIELDS in options else None)
+                                        CONVERSION_FIELDS] if CONVERSION_FIELDS in options else None)
                 else:
                     self.add_column(key, value)
 
-    def prepare_columns(self, other_relations: dict, fk_are_pk=False) -> None:
+    def prepare_columns(self, other_relations: dict, fk_are_pk: bool = False) -> None:
         """
         Prepares the columns for n:1 relations since they extend the columns of the relation.
         Sets the prepared status of the table to true.
@@ -331,7 +332,7 @@ class Relation:
         pk_count = self.count_primary_key_fields(alias_relations)
         schema_name = self.alias.schema if self.alias else self.info.schema
         table_name = self.alias.table if self.alias else self.info.table
-        creation_stmt = f"CREATE TABLE IF NOT EXISTS "
+        creation_stmt = "CREATE TABLE IF NOT EXISTS "
         creation_stmt += f'"{schema_name}".' if len(schema_name) else ""
         creation_stmt += f'"{table_name}"(\n'
         creation_stmt += self.write_columns(alias_relations)
@@ -343,7 +344,7 @@ class Relation:
         return creation_stmt
 
     @staticmethod
-    def make_foreign_key(relation, appendix=""):
+    def make_foreign_key(relation:object, appendix: str = ""):
         """
         writes a single foreign key
         :param relation: the relation that is used as the foreign key base
@@ -352,22 +353,22 @@ class Relation:
         """
         relation_schema = relation.alias.schema if relation.alias else relation.info.schema
         relation_table = relation.alias.table if relation.alias else relation.info.table
-        creation_stmt = f'\tFOREIGN KEY ('
+        creation_stmt = '\tFOREIGN KEY ('
         for col in relation.columns:
             if col.field_type == Field.PRIMARY_KEY:
                 creation_stmt += f'"{appendix}{col.target_name}",'
         creation_stmt = creation_stmt[:-1]
-        creation_stmt += f") REFERENCES "
+        creation_stmt += ") REFERENCES "
         creation_stmt += f'"{relation_schema}".' if len(relation_schema) else ""
         creation_stmt += f'"{relation_table}" ('
         for col in relation.columns:
             if col.field_type == Field.PRIMARY_KEY:
                 creation_stmt += f'"{col.target_name}",'
         creation_stmt = creation_stmt[:-1]
-        creation_stmt += f"),\n"
+        creation_stmt += "),\n"
         return creation_stmt
 
-    def create_nm_table(self, other, other_relations: dict):
+    def create_nm_table(self, other: object, other_relations: dict):
         """
         Creates the helper table for n:m relations
         :param other: the other table of the relation
@@ -412,17 +413,17 @@ class Relation:
             return Field.BASE, None
 
         def parse_column_conversion(convert_dict: dict):
-            if Constants.SOURCE_TYPE not in convert_dict:
+            if SOURCE_TYPE not in convert_dict:
                 raise MalformedMappingException(
-                    f"{Constants.SOURCE_TYPE} not found in conversion definition {convert_dict}")
-            if Constants.TARGET_TYPE not in convert_dict:
+                    f"{SOURCE_TYPE} not found in conversion definition {convert_dict}")
+            if TARGET_TYPE not in convert_dict:
                 raise MalformedMappingException(
-                    f"{Constants.TARGET_TYPE} not found in conversion definition {convert_dict}")
-            source_type = convert_dict[Constants.SOURCE_TYPE]
-            target_type = convert_dict[Constants.TARGET_TYPE]
+                    f"{TARGET_TYPE} not found in conversion definition {convert_dict}")
+            source_type = convert_dict[SOURCE_TYPE]
+            target_type = convert_dict[TARGET_TYPE]
             conversion_function = Conversions.get_conversion(source_type, target_type)
             return conversion_function, convert_dict[
-                Constants.CONV_ARGS] if Constants.CONV_ARGS in convert_dict else None
+                CONV_ARGS] if CONV_ARGS in convert_dict else None
 
         name, definition = parse_column_value(column_value)
         if name not in self.columns:

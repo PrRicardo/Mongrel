@@ -1,22 +1,24 @@
 """
 Transfer Logic can be found here
 """
-import os
-
-from mongrel.helpers.MapFlattener import flatten
-from mongrel.helpers.constants import Constants
-from mongrel.objects.relation import Relation, RelationInfo
-from mongrel.objects.relation_builder import RelationBuilder
-from mongrel.objects.table_builder import TableBuilder
-from mongrel.helpers.database_functions import DatabaseFunctions
-from sqlalchemy import create_engine, URL, text
 import json
+from sqlalchemy import create_engine, URL, text
 import pandas as pd
 import pymongo
 from tqdm import tqdm
 
+from mongrel.helpers.map_flattener import flatten
+from mongrel.helpers.constants import PATH_SEP
+from mongrel.objects.relation import Relation, RelationInfo
+from mongrel.objects.relation_builder import RelationBuilder
+from mongrel.objects.table_builder import TableBuilder
+from mongrel.helpers.database_functions import insert_on_conflict_nothing
+
 
 class Transferrer:
+    """
+    The main class that handles the transfer
+    """
     dependencies: dict[RelationInfo, list[RelationInfo]]
     batch_size: int
     relations: list[Relation]
@@ -55,7 +57,7 @@ class Transferrer:
         self.dependencies = Transferrer.create_dependencies(relation_list)
         self.relations = relation_list
         self.batch_size = batch_size
-        self.length_lookup = dict()
+        self.length_lookup = {}
 
     def prepare_database(self, creation_script: str) -> None:
         """
@@ -104,7 +106,7 @@ class Transferrer:
             data[relation_info] = relation.make_df()
         return data
 
-    def filter_dict(self, doc, relation: Relation, layer=0):
+    def filter_dict(self, doc: dict, relation: Relation, layer: int = 0):
         """
         Walks the dictionary and only looks at the relevant paths
         :param doc: a source document
@@ -120,13 +122,12 @@ class Transferrer:
                         if len(col.path) > layer and key == col.path[layer]:
                             rel_dict[key] = self.filter_dict(doc[key], relation, layer + 1)
             return rel_dict
-        elif isinstance(doc, list):
+        if isinstance(doc, list):
             vals = []
             for entry in doc:
                 vals.append(self.filter_dict(entry, relation, layer))
             return vals
-        else:
-            return doc
+        return doc
 
     def read_document_lines(self, doc: dict, relation: Relation) -> dict:
         """
@@ -135,9 +136,9 @@ class Transferrer:
         :param relation: the relation that uses the information
         :return: the values as a dict for the columns
         """
-        return_values = dict()
+        return_values = {}
         rel_dict = self.filter_dict(doc, relation)
-        flattened = flatten(rel_dict, path_separator=Constants.PATH_SEP)
+        flattened = flatten(rel_dict, path_separator=PATH_SEP)
         for col in relation.columns:
             if col.path:
                 if col.field_type.name != "PRIMARY_KEY":
@@ -155,7 +156,8 @@ class Transferrer:
                             return_values[col.target_name].append(" ")
         return return_values
 
-    def write_cascading(self, relation_info: RelationInfo, data: dict[RelationInfo, pd.DataFrame], connection) -> None:
+    def write_cascading(self, relation_info: RelationInfo, data: dict[RelationInfo, pd.DataFrame],
+                        connection: object) -> None:
         """
         Writes the relation and all prerequisite relations to the target database
         :param relation_info: the table to write
@@ -167,7 +169,7 @@ class Transferrer:
                 self.write_cascading(info, data, connection)
         if len(data[relation_info]) > 0:
             data[relation_info].to_sql(name=relation_info.table, schema=relation_info.schema, if_exists="append",
-                                       method=DatabaseFunctions.insert_on_conflict_nothing, con=connection, index=False)
+                                       method=insert_on_conflict_nothing, con=connection, index=False)
             data[relation_info] = pd.DataFrame(columns=data[relation_info].columns)
 
     def transfer_data(self):
@@ -199,8 +201,8 @@ class Transferrer:
 def transfer_data_from_mongo_to_postgres(relation_config_path: str, mapping_config_path: str, mongo_host: str,
                                          mongo_database: str, mongo_collection: str,
                                          sql_host: str, sql_database: str, mongo_port: int = None, sql_port: int = None,
-                                         sql_user=None, sql_password=None, mongo_user: str = None,
-                                         mongo_password: str = None, batch_size=1000) -> None:
+                                         sql_user: str = None, sql_password: str = None, mongo_user: str = None,
+                                         mongo_password: str = None, batch_size: int = 1000) -> None:
     """
     A wrapper for all the required steps taken for a transfer
     :param relation_config_path: path to the relation config file
@@ -219,8 +221,8 @@ def transfer_data_from_mongo_to_postgres(relation_config_path: str, mapping_conf
     :param batch_size: the batch size used
     """
     relation_builder = RelationBuilder()
-    with open(relation_config_path) as relation_file:
-        with open(mapping_config_path) as mapping_file:
+    with open(relation_config_path, encoding='utf8') as relation_file:
+        with open(mapping_config_path, encoding='utf8') as mapping_file:
             relations = relation_builder.calculate_relations(json.load(relation_file), json.load(mapping_file))
     table_builder = TableBuilder(relations, mapping_config_path)
     creation_stmt = table_builder.make_creation_script()
@@ -229,11 +231,3 @@ def transfer_data_from_mongo_to_postgres(relation_config_path: str, mapping_conf
                               batch_size)
     transferrer.prepare_database(creation_stmt)
     transferrer.transfer_data()
-
-
-if __name__ == "__main__":
-    transfer_data_from_mongo_to_postgres("../configurations/spotify_relations.json",
-                                         "../configurations/spotify_mappings.json", mongo_host="localhost",
-                                         mongo_database="hierarchical_relational_test", mongo_collection="test_tracks",
-                                         sql_host='127.0.0.1', sql_database='ricardo', sql_user='ricardo',
-                                         sql_port=5432, sql_password=os.getenv("PASSWORD"))

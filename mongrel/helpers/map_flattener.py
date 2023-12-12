@@ -1,3 +1,7 @@
+"""
+Contains the map flattener used to break down the data within the jsons
+"""
+
 from functools import (partial,
                        singledispatch)
 from itertools import chain
@@ -79,7 +83,7 @@ def flatten(object_: Object,
     while keys:
         key = keys.pop()
         new_result = []
-        for index, record in enumerate(result):
+        for _, record in enumerate(result):
             try:
                 value = record[key]
             except KeyError:
@@ -102,8 +106,7 @@ def flatten(object_: Object,
                                                path_separator=path_separator)
                         for sub_value in value
                     ]
-                    keys.update(chain.from_iterable(map(dict.keys,
-                                                        new_records)))
+                    keys.update(chain.from_iterable([dict.keys(recordie) for recordie in new_records]))
                     if new_records:
                         new_result.extend({**new_record, **record}
                                           for new_record in new_records)
@@ -155,7 +158,5 @@ def _(object_: Array,
     """
     Overload for list data_type
     """
-    return {prefix[:-len(path_separator)]: list(map(partial(
-        flatten_nested_objects,
-        path_separator=path_separator),
-        object_))}
+    return {prefix[:-len(path_separator)]: [partial(flatten_nested_objects,
+                                                    path_separator=path_separator)(obj) for obj in object_]}

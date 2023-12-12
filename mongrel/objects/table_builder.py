@@ -3,13 +3,15 @@ Manages the creation of tables with a creation statement
 """
 
 import json
-
 from mongrel.helpers.exceptions import MalformedMappingException
 from mongrel.objects.relation import Relation
-from mongrel.objects.relation_builder import RelationBuilder
 
 
 class TableBuilder:
+    """
+    This class builds the creation statement of the database and manages some of the relations mentioned in the config
+    and relation_builder
+    """
     _relations: list[Relation]
     _rel_dict: dict
 
@@ -21,8 +23,8 @@ class TableBuilder:
         """
         self._relations = relations_vals
         self._rel_dict = self.prepare_rel_dict()
-        with open(relation_file_path) as relation_file:
-            self.add_columns_to_relations(json.load(relation_file))
+        with open(relation_file_path, encoding="utf8") as relation_file_inner:
+            self.add_columns_to_relations(json.load(relation_file_inner))
         self._relations = self._prepare_nm_relations(relations_vals)
 
     def get_relations(self):
@@ -35,7 +37,7 @@ class TableBuilder:
             relation.prepare_columns(self._rel_dict)
         return self._relations
 
-    def _prepare_nm_relations(self, relations_vals):
+    def _prepare_nm_relations(self, relations_vals:list):
         """
         Creates the nm tables that are required to emulate n:m relations
         :param relations_vals: all tables with their relations
@@ -101,19 +103,18 @@ class TableBuilder:
                     if "n:1" not in relation.relations:
                         creation_stmt_inner = creation_stmt_inner + relation.make_creation_script(self._rel_dict)
                         done.append(relation)
-                else:
-                    if "n:1" not in relation.relations:
-                        alias_relations = relation.get_alias_relations(self._relations)
-                        fine = True
-                        for alias_relation in alias_relations:
-                            if "n:1" in alias_relation.relations:
-                                fine = False
-                                break
-                        if fine:
-                            creation_stmt_inner = creation_stmt_inner + relation.make_creation_script(self._rel_dict,
-                                                                                                      alias_relations)
-                            done.append(relation)
-                            done.extend(alias_relations)
+                elif "n:1" not in relation.relations:
+                    alias_relations = relation.get_alias_relations(self._relations)
+                    fine = True
+                    for alias_relation in alias_relations:
+                        if "n:1" in alias_relation.relations:
+                            fine = False
+                            break
+                    if fine:
+                        creation_stmt_inner = creation_stmt_inner + relation.make_creation_script(self._rel_dict,
+                                                                                                  alias_relations)
+                        done.append(relation)
+                        done.extend(alias_relations)
         # Creates the tables with n:1 relations since they depend on each other
         while len(done) != len(self._relations):
             progress = 0
@@ -143,13 +144,3 @@ class TableBuilder:
                 raise MalformedMappingException("There are cycles in the n:1 relations and therefore "
                                                 "no foreign key could be generated.")
         return creation_stmt_inner
-
-
-if __name__ == "__main__":
-    relation_builder = RelationBuilder()
-    with open("configurations/relations.json") as relation_file:
-        with open("configurations/mappings.json") as mapping_file:
-            relations = relation_builder.calculate_relations(json.load(relation_file), json.load(mapping_file))
-    table_builder = TableBuilder(relations, "configurations/mappings.json")
-    creation_stmt = table_builder.make_creation_script()
-    pass
