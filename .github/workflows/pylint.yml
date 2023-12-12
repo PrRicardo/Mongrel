@@ -4,6 +4,8 @@ on: [push]
 
 jobs:
   build:
+    env:  
+        password: postgres
     runs-on: ubuntu-latest
     strategy:
       matrix:
