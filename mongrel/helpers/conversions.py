@@ -23,6 +23,9 @@ from datetime import datetime
 
 
 class Conversions:
+    """
+    This class stores all the conversion functions and needs to be extended for other use cases
+    """
     @staticmethod
     def get_conversion(source_type: str, target_type: str):
         """
@@ -57,12 +60,11 @@ class Conversions:
         return parsed.strftime("%Y-%m-%d")
 
     @staticmethod
-    def do_nothing(val, **kwargs):
+    def do_nothing(val):
         """
         this is the default value of the conversion functionality, it simplifies the function calling during the
         transfer
         :param val: the value
-        :param kwargs: an empty dict
-        :return: just the inital value 🤓
+        :return: just the initial value 🤓
         """
         return val

@@ -3,12 +3,12 @@ Transfer Logic can be found here
 """
 import os
 
-from mongrel.helpers.MapFlattener import flatten
-from mongrel.helpers.constants import Constants
+from mongrel.helpers.map_flattener import flatten
+from mongrel.helpers.constants import *
 from mongrel.objects.relation import Relation, RelationInfo
 from mongrel.objects.relation_builder import RelationBuilder
 from mongrel.objects.table_builder import TableBuilder
-from mongrel.helpers.database_functions import DatabaseFunctions
+from mongrel.helpers.database_functions import insert_on_conflict_nothing
 from sqlalchemy import create_engine, URL, text
 import json
 import pandas as pd
@@ -137,7 +137,7 @@ class Transferrer:
         """
         return_values = dict()
         rel_dict = self.filter_dict(doc, relation)
-        flattened = flatten(rel_dict, path_separator=Constants.PATH_SEP)
+        flattened = flatten(rel_dict, path_separator=PATH_SEP)
         for col in relation.columns:
             if col.path:
                 if col.field_type.name != "PRIMARY_KEY":
@@ -167,7 +167,7 @@ class Transferrer:
                 self.write_cascading(info, data, connection)
         if len(data[relation_info]) > 0:
             data[relation_info].to_sql(name=relation_info.table, schema=relation_info.schema, if_exists="append",
-                                       method=DatabaseFunctions.insert_on_conflict_nothing, con=connection, index=False)
+                                       method=insert_on_conflict_nothing, con=connection, index=False)
             data[relation_info] = pd.DataFrame(columns=data[relation_info].columns)
 
     def transfer_data(self):

@@ -2,7 +2,7 @@
 This file contains the main logic for the objects in the transfers.
 """
 import pandas as pd
-from mongrel.helpers.constants import Constants
+from mongrel.helpers.constants import *
 from mongrel.helpers.conversions import Conversions
 from mongrel.helpers.exceptions import MalformedMappingException
 from enum import Enum
@@ -106,7 +106,7 @@ class Column:
         self.translated_path = ''
         if path is not None:
             for sub_path in path:
-                self.translated_path += sub_path + Constants.PATH_SEP
+                self.translated_path += sub_path + PATH_SEP
             self.translated_path = self.translated_path[:-1]
 
     def __eq__(self, other):
@@ -156,7 +156,7 @@ class Relation:
         self.prepped = False
         if options is None:
             options = {}
-        self.alias = RelationInfo(options[Constants.ALIAS]) if Constants.ALIAS in options else None
+        self.alias = RelationInfo(options[ALIAS]) if ALIAS in options else None
 
     def __eq__(self, other):
         """
@@ -204,13 +204,13 @@ class Relation:
         :param rel_dict: The dictionary of relevant column information
         """
         for key, value in rel_dict.items():
-            if key != Constants.TRAN_OPTIONS:
-                if Constants.TRAN_OPTIONS in rel_dict:
-                    options = rel_dict[Constants.TRAN_OPTIONS]
+            if key != TRAN_OPTIONS:
+                if TRAN_OPTIONS in rel_dict:
+                    options = rel_dict[TRAN_OPTIONS]
                     self.add_column(key, value,
-                                    options[Constants.REFERENCE_KEY] if Constants.REFERENCE_KEY in options else None,
+                                    options[REFERENCE_KEY] if REFERENCE_KEY in options else None,
                                     options[
-                                        Constants.CONVERSION_FIELDS] if Constants.CONVERSION_FIELDS in options else None)
+                                        CONVERSION_FIELDS] if CONVERSION_FIELDS in options else None)
                 else:
                     self.add_column(key, value)
 
@@ -412,17 +412,17 @@ class Relation:
             return Field.BASE, None
 
         def parse_column_conversion(convert_dict: dict):
-            if Constants.SOURCE_TYPE not in convert_dict:
+            if SOURCE_TYPE not in convert_dict:
                 raise MalformedMappingException(
-                    f"{Constants.SOURCE_TYPE} not found in conversion definition {convert_dict}")
-            if Constants.TARGET_TYPE not in convert_dict:
+                    f"{SOURCE_TYPE} not found in conversion definition {convert_dict}")
+            if TARGET_TYPE not in convert_dict:
                 raise MalformedMappingException(
-                    f"{Constants.TARGET_TYPE} not found in conversion definition {convert_dict}")
-            source_type = convert_dict[Constants.SOURCE_TYPE]
-            target_type = convert_dict[Constants.TARGET_TYPE]
+                    f"{TARGET_TYPE} not found in conversion definition {convert_dict}")
+            source_type = convert_dict[SOURCE_TYPE]
+            target_type = convert_dict[TARGET_TYPE]
             conversion_function = Conversions.get_conversion(source_type, target_type)
             return conversion_function, convert_dict[
-                Constants.CONV_ARGS] if Constants.CONV_ARGS in convert_dict else None
+                CONV_ARGS] if CONV_ARGS in convert_dict else None
 
         name, definition = parse_column_value(column_value)
         if name not in self.columns:

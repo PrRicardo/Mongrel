@@ -94,9 +94,9 @@ def insert_tracks(tracks_inner: list):
     mongo_client = pymongo.MongoClient("localhost", 27017)
     db = mongo_client.hierarchical_relational_test
     for track in tqdm.tqdm(tracks_inner):
-        db.test_tracks.insert_one(tracks_inner)
+        db.test_tracks.insert_one(track)
 
 
 if __name__ == "__main__":
-    tracks = aggregate_spotify_data()
-    insert_tracks(tracks)
+    tracks_to_insert = aggregate_spotify_data()
+    insert_tracks(tracks_to_insert)

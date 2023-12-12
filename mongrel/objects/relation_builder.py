@@ -3,7 +3,7 @@ manages the creation of tables and their relations from the configuration file
 """
 import json
 from .relation import Relation, RelationInfo
-from ..helpers.constants import Constants
+from ..helpers.constants import *
 
 
 class RelationBuilder:
@@ -64,8 +64,8 @@ class RelationBuilder:
             for idx, val in enumerate(relation_list):
                 if idx % 2 == 0:
                     if RelationInfo(val) not in relations:
-                        if Constants.TRAN_OPTIONS in mapping_dict[val]:
-                            relations.append(Relation(RelationInfo(val), mapping_dict[val][Constants.TRAN_OPTIONS]))
+                        if TRAN_OPTIONS in mapping_dict[val]:
+                            relations.append(Relation(RelationInfo(val), mapping_dict[val][TRAN_OPTIONS]))
                         else:
                             relations.append(Relation(RelationInfo(val)))
         return relations

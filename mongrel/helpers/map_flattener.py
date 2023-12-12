@@ -79,7 +79,7 @@ def flatten(object_: Object,
     while keys:
         key = keys.pop()
         new_result = []
-        for index, record in enumerate(result):
+        for _, record in enumerate(result):
             try:
                 value = record[key]
             except KeyError:
