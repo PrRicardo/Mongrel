@@ -220,8 +220,8 @@ def transfer_data_from_mongo_to_postgres(relation_config_path: str, mapping_conf
     :param batch_size: the batch size used
     """
     relation_builder = RelationBuilder()
-    with open(relation_config_path) as relation_file:
-        with open(mapping_config_path) as mapping_file:
+    with open(relation_config_path, encoding='utf8') as relation_file:
+        with open(mapping_config_path, encoding='utf8') as mapping_file:
             relations = relation_builder.calculate_relations(json.load(relation_file), json.load(mapping_file))
     table_builder = TableBuilder(relations, mapping_config_path)
     creation_stmt = table_builder.make_creation_script()
