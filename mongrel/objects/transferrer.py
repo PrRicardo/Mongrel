@@ -4,7 +4,7 @@ Transfer Logic can be found here
 import os
 
 from mongrel.helpers.map_flattener import flatten
-from mongrel.helpers.constants import *
+from mongrel.helpers.constants import PATH_SEP
 from mongrel.objects.relation import Relation, RelationInfo
 from mongrel.objects.relation_builder import RelationBuilder
 from mongrel.objects.table_builder import TableBuilder

@@ -19,7 +19,7 @@ def fetch_playlists(client: spotipy.Spotify):
     return playlists
 
 
-def fetch_songs_of_playlists(client: spotipy.Spotify, playlists: list[dict]):
+def fetch_songs_of_playlists(client: spotipy.Spotify, playlists: list):
     """
     Gets information on all the songs of a playlist
     :param client: a connected spotipy client

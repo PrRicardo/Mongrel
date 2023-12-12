@@ -1,3 +1,7 @@
+"""
+Contains the map flattener used to break down the data within the jsons
+"""
+
 from functools import (partial,
                        singledispatch)
 from itertools import chain

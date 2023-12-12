@@ -3,7 +3,7 @@ manages the creation of tables and their relations from the configuration file
 """
 import json
 from .relation import Relation, RelationInfo
-from ..helpers.constants import *
+from ..helpers.constants import TRAN_OPTIONS
 
 
 class RelationBuilder:

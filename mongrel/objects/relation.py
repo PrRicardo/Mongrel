@@ -1,11 +1,12 @@
 """
 This file contains the main logic for the objects in the transfers.
 """
+from enum import Enum
 import pandas as pd
-from mongrel.helpers.constants import *
+from mongrel.helpers.constants import PATH_SEP, CONVERSION_FIELDS, ALIAS, CONV_ARGS, REFERENCE_KEY, TRAN_OPTIONS, \
+    TARGET_TYPE, SOURCE_TYPE
 from mongrel.helpers.conversions import Conversions
 from mongrel.helpers.exceptions import MalformedMappingException
-from enum import Enum
 
 
 class Field(Enum):
@@ -331,7 +332,7 @@ class Relation:
         pk_count = self.count_primary_key_fields(alias_relations)
         schema_name = self.alias.schema if self.alias else self.info.schema
         table_name = self.alias.table if self.alias else self.info.table
-        creation_stmt = f"CREATE TABLE IF NOT EXISTS "
+        creation_stmt = "CREATE TABLE IF NOT EXISTS "
         creation_stmt += f'"{schema_name}".' if len(schema_name) else ""
         creation_stmt += f'"{table_name}"(\n'
         creation_stmt += self.write_columns(alias_relations)
@@ -352,19 +353,19 @@ class Relation:
         """
         relation_schema = relation.alias.schema if relation.alias else relation.info.schema
         relation_table = relation.alias.table if relation.alias else relation.info.table
-        creation_stmt = f'\tFOREIGN KEY ('
+        creation_stmt = '\tFOREIGN KEY ('
         for col in relation.columns:
             if col.field_type == Field.PRIMARY_KEY:
                 creation_stmt += f'"{appendix}{col.target_name}",'
         creation_stmt = creation_stmt[:-1]
-        creation_stmt += f") REFERENCES "
+        creation_stmt += ") REFERENCES "
         creation_stmt += f'"{relation_schema}".' if len(relation_schema) else ""
         creation_stmt += f'"{relation_table}" ('
         for col in relation.columns:
             if col.field_type == Field.PRIMARY_KEY:
                 creation_stmt += f'"{col.target_name}",'
         creation_stmt = creation_stmt[:-1]
-        creation_stmt += f"),\n"
+        creation_stmt += "),\n"
         return creation_stmt
 
     def create_nm_table(self, other, other_relations: dict):
