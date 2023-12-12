@@ -26,6 +26,7 @@ class Conversions:
     """
     This class stores all the conversion functions and needs to be extended for other use cases
     """
+
     @staticmethod
     def get_conversion(source_type: str, target_type: str):
         """
@@ -41,7 +42,7 @@ class Conversions:
         raise NotImplementedError(f"The conversion of {source_type} to {target_type} is not implemented!")
 
     @staticmethod
-    def string_to_date(val, **kwargs):
+    def string_to_date(val: str, **kwargs):
         """
         Takes a string and parses it to a date. This is currently pretty hard-coded for the spotify use case and needs
         to be generified
@@ -49,8 +50,8 @@ class Conversions:
         :param kwargs: these keyword arguments get filled with the args given in the mapping file
         :return: the converted value
         """
-        if val is None:
-            return val
+        if val is None or val == "0000":
+            return None
         if len(val) == 4:
             parsed = datetime.strptime(val, "%Y")
         elif len(val) == 7:
@@ -60,7 +61,7 @@ class Conversions:
         return parsed.strftime("%Y-%m-%d")
 
     @staticmethod
-    def do_nothing(val):
+    def do_nothing(val: object):
         """
         this is the default value of the conversion functionality, it simplifies the function calling during the
         transfer

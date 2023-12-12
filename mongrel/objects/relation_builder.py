@@ -55,7 +55,7 @@ class RelationBuilder:
         return relation_lists
 
     @staticmethod
-    def fetch_unique_relations(relation_lists, mapping_dict):
+    def fetch_unique_relations(relation_lists: list, mapping_dict: dict):
         """
         Puts all relations in a list as Relation objects
         :param relation_lists: all unique relations in the configuration file

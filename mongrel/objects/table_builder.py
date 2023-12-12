@@ -23,7 +23,7 @@ class TableBuilder:
         """
         self._relations = relations_vals
         self._rel_dict = self.prepare_rel_dict()
-        with open(relation_file_path) as relation_file_inner:
+        with open(relation_file_path, "utf8") as relation_file_inner:
             self.add_columns_to_relations(json.load(relation_file_inner))
         self._relations = self._prepare_nm_relations(relations_vals)
 
@@ -37,7 +37,7 @@ class TableBuilder:
             relation.prepare_columns(self._rel_dict)
         return self._relations
 
-    def _prepare_nm_relations(self, relations_vals):
+    def _prepare_nm_relations(self, relations_vals:list):
         """
         Creates the nm tables that are required to emulate n:m relations
         :param relations_vals: all tables with their relations
@@ -103,19 +103,18 @@ class TableBuilder:
                     if "n:1" not in relation.relations:
                         creation_stmt_inner = creation_stmt_inner + relation.make_creation_script(self._rel_dict)
                         done.append(relation)
-                else:
-                    if "n:1" not in relation.relations:
-                        alias_relations = relation.get_alias_relations(self._relations)
-                        fine = True
-                        for alias_relation in alias_relations:
-                            if "n:1" in alias_relation.relations:
-                                fine = False
-                                break
-                        if fine:
-                            creation_stmt_inner = creation_stmt_inner + relation.make_creation_script(self._rel_dict,
-                                                                                                      alias_relations)
-                            done.append(relation)
-                            done.extend(alias_relations)
+                elif "n:1" not in relation.relations:
+                    alias_relations = relation.get_alias_relations(self._relations)
+                    fine = True
+                    for alias_relation in alias_relations:
+                        if "n:1" in alias_relation.relations:
+                            fine = False
+                            break
+                    if fine:
+                        creation_stmt_inner = creation_stmt_inner + relation.make_creation_script(self._rel_dict,
+                                                                                                  alias_relations)
+                        done.append(relation)
+                        done.extend(alias_relations)
         # Creates the tables with n:1 relations since they depend on each other
         while len(done) != len(self._relations):
             progress = 0

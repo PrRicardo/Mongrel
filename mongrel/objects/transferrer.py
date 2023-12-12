@@ -106,7 +106,7 @@ class Transferrer:
             data[relation_info] = relation.make_df()
         return data
 
-    def filter_dict(self, doc, relation: Relation, layer=0):
+    def filter_dict(self, doc: dict, relation: Relation, layer: int = 0):
         """
         Walks the dictionary and only looks at the relevant paths
         :param doc: a source document
@@ -156,7 +156,8 @@ class Transferrer:
                             return_values[col.target_name].append(" ")
         return return_values
 
-    def write_cascading(self, relation_info: RelationInfo, data: dict[RelationInfo, pd.DataFrame], connection) -> None:
+    def write_cascading(self, relation_info: RelationInfo, data: dict[RelationInfo, pd.DataFrame],
+                        connection: object) -> None:
         """
         Writes the relation and all prerequisite relations to the target database
         :param relation_info: the table to write
@@ -200,8 +201,8 @@ class Transferrer:
 def transfer_data_from_mongo_to_postgres(relation_config_path: str, mapping_config_path: str, mongo_host: str,
                                          mongo_database: str, mongo_collection: str,
                                          sql_host: str, sql_database: str, mongo_port: int = None, sql_port: int = None,
-                                         sql_user=None, sql_password=None, mongo_user: str = None,
-                                         mongo_password: str = None, batch_size=1000) -> None:
+                                         sql_user: str = None, sql_password: str = None, mongo_user: str = None,
+                                         mongo_password: str = None, batch_size: int = 1000) -> None:
     """
     A wrapper for all the required steps taken for a transfer
     :param relation_config_path: path to the relation config file

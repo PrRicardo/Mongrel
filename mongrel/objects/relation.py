@@ -199,7 +199,7 @@ class Relation:
             else:
                 self.relations[key] = [RelationInfo(val)]
 
-    def parse_column_dict(self, rel_dict) -> None:
+    def parse_column_dict(self, rel_dict: dict) -> None:
         """
         Adds the columns to the class, parsing their conversion functions if necessary
         :param rel_dict: The dictionary of relevant column information
@@ -215,7 +215,7 @@ class Relation:
                 else:
                     self.add_column(key, value)
 
-    def prepare_columns(self, other_relations: dict, fk_are_pk=False) -> None:
+    def prepare_columns(self, other_relations: dict, fk_are_pk: bool = False) -> None:
         """
         Prepares the columns for n:1 relations since they extend the columns of the relation.
         Sets the prepared status of the table to true.
@@ -344,7 +344,7 @@ class Relation:
         return creation_stmt
 
     @staticmethod
-    def make_foreign_key(relation, appendix=""):
+    def make_foreign_key(relation, appendix: str = ""):
         """
         writes a single foreign key
         :param relation: the relation that is used as the foreign key base
@@ -368,7 +368,7 @@ class Relation:
         creation_stmt += "),\n"
         return creation_stmt
 
-    def create_nm_table(self, other, other_relations: dict):
+    def create_nm_table(self, other: object, other_relations: dict):
         """
         Creates the helper table for n:m relations
         :param other: the other table of the relation
