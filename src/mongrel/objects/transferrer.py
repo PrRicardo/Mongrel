@@ -7,12 +7,12 @@ import pandas as pd
 import pymongo
 from tqdm import tqdm
 
-from mongrel.helpers.map_flattener import flatten
-from mongrel.helpers.constants import PATH_SEP
-from mongrel.objects.relation import Relation, RelationInfo
-from mongrel.objects.relation_builder import RelationBuilder
-from mongrel.objects.table_builder import TableBuilder
-from mongrel.helpers.database_functions import insert_on_conflict_nothing
+from src.mongrel.helpers.map_flattener import flatten
+from src.mongrel.helpers.constants import PATH_SEP
+from src.mongrel.objects.relation import Relation, RelationInfo
+from src.mongrel.objects.relation_builder import RelationBuilder
+from src.mongrel.objects.table_builder import TableBuilder
+from src.mongrel.helpers.database_functions import insert_on_conflict_nothing
 
 
 class Transferrer:

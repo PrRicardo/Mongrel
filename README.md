@@ -412,7 +412,7 @@ into one music.artists table. If there is different information on columns or PK
 
 ```python
 import os
-from mongrel import transfer_data_from_mongo_to_postgres
+from src.mongrel import transfer_data_from_mongo_to_postgres
 
 if __name__ == "__main__":
    transfer_data_from_mongo_to_postgres("../configurations/spotify_relations.json",
