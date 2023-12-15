@@ -3,8 +3,8 @@ Manages the creation of tables with a creation statement
 """
 
 import json
-from ...mongrel.helpers.exceptions import MalformedMappingException
-from ...mongrel.objects.relation import Relation
+from ..helpers.exceptions import MalformedMappingException
+from ..objects.relation import Relation
 
 
 class TableBuilder:

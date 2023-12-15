@@ -3,10 +3,10 @@ This file contains the main logic for the objects in the transfers.
 """
 from enum import Enum
 import pandas as pd
-from ...mongrel.helpers.constants import PATH_SEP, CONVERSION_FIELDS, ALIAS, CONV_ARGS, REFERENCE_KEY, TRAN_OPTIONS, \
+from ..helpers.constants import PATH_SEP, CONVERSION_FIELDS, ALIAS, CONV_ARGS, REFERENCE_KEY, TRAN_OPTIONS, \
     TARGET_TYPE, SOURCE_TYPE
-from ...mongrel.helpers.conversions import Conversions
-from ...mongrel.helpers.exceptions import MalformedMappingException
+from ..helpers.conversions import Conversions
+from ..helpers.exceptions import MalformedMappingException
 
 
 class Field(Enum):
