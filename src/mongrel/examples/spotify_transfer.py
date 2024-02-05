@@ -3,7 +3,7 @@ Example usage of the transferer applied to the Spotify use case
 """
 
 import os
-from ..objects.transferrer import transfer_data_from_mongo_to_postgres
+from mongrel import transfer_data_from_mongo_to_postgres
 
 if __name__ == "__main__":
     transfer_data_from_mongo_to_postgres("spotify_relations.json",
