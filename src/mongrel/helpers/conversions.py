@@ -86,11 +86,10 @@ class Conversions:
         return val
 
     @staticmethod
-    def remove_null_characters(val: str, **kwargs):
+    def remove_null_characters(val: str):
         """
         Removes null characters from a string if there are issues writing to postgres
         :param val: the value that needs to be converted
-        :param kwargs: these keyword arguments get filled with the args given in the mapping file (empty)
         :return: the converted value
         """
         val.replace("\x00", "")
