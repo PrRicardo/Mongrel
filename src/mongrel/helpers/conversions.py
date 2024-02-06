@@ -92,5 +92,5 @@ class Conversions:
         :param val: the value that needs to be converted
         :return: the converted value
         """
-        val.replace("\x00", "")
-        return val
+        return val.replace("\x00", "")
+
