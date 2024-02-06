@@ -72,6 +72,8 @@ class Conversions:
         :param kwargs: these keyword arguments get filled with the args given in the mapping file
         :return: the converted value
         """
+        if val is None or val == "":
+            return None
         parsed = datetime.strptime(val, kwargs["input_format"])
         return parsed.strftime(kwargs["output_format"])
 
@@ -93,4 +95,3 @@ class Conversions:
         :return: the converted value
         """
         return val.replace("\x00", "")
-
