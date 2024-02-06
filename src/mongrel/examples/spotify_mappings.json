@@ -9,7 +9,7 @@
       "conversion_fields": {
         "release_date": {
           "source_type": "string",
-          "target_type": "date",
+          "target_type": "spotify_date",
           "args": {
             "format": "%Y-%m-%d"
           }
