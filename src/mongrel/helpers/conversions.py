@@ -39,10 +39,14 @@ class Conversions:
         if source_type.lower() == "string":
             if target_type.lower() == "date":
                 return Conversions.string_to_date
+            if target_type.lower() == "string":
+                return Conversions.remove_null_characters
+            if target_type.lower() == "spotify_date":
+                return Conversions.string_to_spotify_date
         raise NotImplementedError(f"The conversion of {source_type} to {target_type} is not implemented!")
 
     @staticmethod
-    def string_to_date(val: str, **kwargs):
+    def string_to_spotify_date(val: str, **kwargs):
         """
         Takes a string and parses it to a date. This is currently pretty hard-coded for the spotify use case and needs
         to be generified
@@ -61,6 +65,17 @@ class Conversions:
         return parsed.strftime("%Y-%m-%d")
 
     @staticmethod
+    def string_to_date(val: str, **kwargs):
+        """
+        Takes a string and parses it to a date.
+        :param val: the value that needs to be converted
+        :param kwargs: these keyword arguments get filled with the args given in the mapping file
+        :return: the converted value
+        """
+        parsed = datetime.strptime(val, kwargs["input_format"])
+        return parsed.strftime(kwargs["output_format"])
+
+    @staticmethod
     def do_nothing(val: object):
         """
         this is the default value of the conversion functionality, it simplifies the function calling during the
@@ -69,3 +84,13 @@ class Conversions:
         :return: just the initial value 🤓
         """
         return val
+
+    @staticmethod
+    def remove_null_characters(val: str):
+        """
+        Removes null characters from a string if there are issues writing to postgres
+        :param val: the value that needs to be converted
+        :return: the converted value
+        """
+        return val.replace("\x00", "")
+
