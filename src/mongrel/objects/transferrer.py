@@ -181,8 +181,8 @@ class Transferrer:
         db = mongo_client[self.mongo_database]
         collie = db[self.mongo_collection]
         data: dict[RelationInfo, pd.DataFrame] = self.create_data_dict()
-        url_object = URL.create("postgresql", username=self.sql_user, password=self.sql_password, host=self.sql_host,
-                                port=self.sql_port, database=self.sql_database)
+        url_object = URL.create("postgresql", username=self.sql_user, password=self.sql_password,
+                                host=self.sql_host, port=self.sql_port, database=self.sql_database)
         engine_go_brr = create_engine(url_object)
         with engine_go_brr.connect() as connie:
             for doc in tqdm(collie.find()):
@@ -196,6 +196,7 @@ class Transferrer:
             for relation in self.relations:
                 relation_info = relation.info if not relation.alias else relation.alias
                 self.write_cascading(relation_info, data, connie)
+        mongo_client.close()
 
 
 def transfer_data_from_mongo_to_postgres(relation_config_path: str, mapping_config_path: str, mongo_host: str,
