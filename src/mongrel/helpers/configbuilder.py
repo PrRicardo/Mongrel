@@ -1,6 +1,6 @@
 import json
 import pymongo
-from map_flattener import flatten
+from .map_flattener import flatten
 
 
 class ConfigurationBuilder:
@@ -33,9 +33,9 @@ class ConfigurationBuilder:
         collie = db[mongo_collection]
         try:
             example_document = collie.find()[0]
-        except:
-            raise FileExistsError("There was a issue getting an example document! Please check the collection {}",
-                                  mongo_collection)
+        except Exception as exc:
+            raise FileExistsError(f"There was a issue getting an example document! "
+                                  f"Please check the collection {mongo_collection}") from exc
         example_document = flatten(example_document)[0]
         configuration = {}
         for key, value in example_document.items():
@@ -44,12 +44,11 @@ class ConfigurationBuilder:
                 typ = ConfigurationBuilder._guess_type(value)
                 configuration[key] = name + " " + typ
         configuration = {mongo_collection: configuration}
-        with open(mapping_config_path, "w") as file:
-            configuration = json.dumps(configuration, indent=4)
-            file.write(configuration)
-        with open(relation_config_path, "w") as file:
+        with open(mapping_config_path, "w", encoding="utf8") as file:
+            configuration_str = json.dumps(configuration, indent=4)
+            file.write(configuration_str)
+        with open(relation_config_path, "w", encoding="utf8") as file:
             json.dump({mongo_collection: {}}, file)
-        return
 
 
 if __name__ == "__main__":

@@ -178,27 +178,25 @@ class Transferrer:
         """
         mongo_client = pymongo.MongoClient(host=self.mongo_host, port=self.mongo_port, username=self.mongo_user,
                                            password=self.mongo_password)
-        try:
-            db = mongo_client[self.mongo_database]
-            collie = db[self.mongo_collection]
-            data: dict[RelationInfo, pd.DataFrame] = self.create_data_dict()
-            url_object = URL.create("postgresql", username=self.sql_user, password=self.sql_password, host=self.sql_host,
-                                    port=self.sql_port, database=self.sql_database)
-            engine_go_brr = create_engine(url_object)
-            with engine_go_brr.connect() as connie:
-                for doc in tqdm(collie.find()):
-                    for relation in self.relations:
-                        vals = self.read_document_lines(doc, relation)
-                        df = pd.DataFrame.from_dict(vals, orient='index').transpose()
-                        relation_info = relation.info if not relation.alias else relation.alias
-                        data[relation_info] = pd.concat([data[relation_info], df], ignore_index=True)
-                        if len(data[relation_info]) > self.batch_size:
-                            self.write_cascading(relation_info, data, connie)
+        db = mongo_client[self.mongo_database]
+        collie = db[self.mongo_collection]
+        data: dict[RelationInfo, pd.DataFrame] = self.create_data_dict()
+        url_object = URL.create("postgresql", username=self.sql_user, password=self.sql_password,
+                                host=self.sql_host, port=self.sql_port, database=self.sql_database)
+        engine_go_brr = create_engine(url_object)
+        with engine_go_brr.connect() as connie:
+            for doc in tqdm(collie.find()):
                 for relation in self.relations:
+                    vals = self.read_document_lines(doc, relation)
+                    df = pd.DataFrame.from_dict(vals, orient='index').transpose()
                     relation_info = relation.info if not relation.alias else relation.alias
-                    self.write_cascading(relation_info, data, connie)
-        finally:
-            mongo_client.close()
+                    data[relation_info] = pd.concat([data[relation_info], df], ignore_index=True)
+                    if len(data[relation_info]) > self.batch_size:
+                        self.write_cascading(relation_info, data, connie)
+            for relation in self.relations:
+                relation_info = relation.info if not relation.alias else relation.alias
+                self.write_cascading(relation_info, data, connie)
+        mongo_client.close()
 
 
 def transfer_data_from_mongo_to_postgres(relation_config_path: str, mapping_config_path: str, mongo_host: str,
