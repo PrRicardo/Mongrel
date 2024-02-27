@@ -15,7 +15,7 @@ class ConfigurationBuilder:
     @staticmethod
     def _guess_type(value) -> str:
         if isinstance(value, bool):
-            return "BOOL"
+            return "BOOLEAN"
         if isinstance(value, int):
             return "INTEGER"
         if isinstance(value, float):
