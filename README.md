@@ -7,6 +7,13 @@ Hi! Thanks for actually reading the README.md!
 MONGREL is a tool that allows hierarchical datastructures like MongoDB to be ported to relational datastructures like
 PostgreSQL. Currently only these two databases are supported as source and target respectively.
 
+## Installing
+
+I've managed to deploy the package to PyPi :D Here is the link!
+````commandline
+pip install mongrel-transferrer==0.0.1
+````
+
 ## Requirements
 
 The supported Python version is 3.10+. You'll need a source mongo, a target PostgreSQL and two configuration files.
@@ -412,12 +419,13 @@ into one music.artists table. If there is different information on columns or PK
 
 ```python
 import os
-from src.mongrel import transfer_data_from_mongo_to_postgres
+from mongrel_transferrer.mongrel.objects.transferrer import transfer_data_from_mongo_to_postgres
 
 if __name__ == "__main__":
-   transfer_data_from_mongo_to_postgres("../configurations/spotify_relations.json",
-                                        "../configurations/spotify_mappings.json", mongo_host="localhost",
-                                        mongo_database="hierarchical_relational_test", mongo_collection="test_tracks",
-                                        sql_host='127.0.0.1', sql_database='ricardo', sql_user='ricardo',
-                                        sql_port=5432, sql_password=os.getenv("PASSWORD"))
+    transfer_data_from_mongo_to_postgres("spotify_relations.json",
+                                         "spotify_mappings.json", mongo_host="localhost",
+                                         mongo_database="hierarchical_relational_test", mongo_collection="test_tracks",
+                                         sql_host='127.0.0.1', sql_database='spotify', sql_user='postgres',
+                                         sql_port=5432, sql_password=os.getenv("PASSWORD"), conflict_handling="Drop")
+
 ```
