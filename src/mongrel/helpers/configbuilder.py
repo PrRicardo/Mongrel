@@ -19,6 +19,8 @@ This class builds your configs
 """
 
 import json
+import typing
+
 import pymongo
 from .map_flattener import flatten
 
@@ -38,7 +40,7 @@ class ConfigurationBuilder:
         return name_arr[-1]
 
     @staticmethod
-    def _guess_type(value) -> str:
+    def _guess_type(value: typing.Any) -> str:
         """
         Type guessing function based on viewing a single value
         :param value: The value to look at
@@ -67,7 +69,6 @@ class ConfigurationBuilder:
         :param mongo_port: optional, the port of the source mongo database
         :param mongo_user: optional, the user of the source mongo database
         :param mongo_password: optional, the password of the user for the source database
-        :return: Nothing, the files get saved to the given location
         """
         mongo_client = pymongo.MongoClient(host=mongo_host, port=mongo_port, username=mongo_user,
                                            password=mongo_password)
