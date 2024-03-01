@@ -264,7 +264,7 @@ def transfer_data_from_mongo_to_postgres(relation_config_path: str, mapping_conf
     """
     print("""
         MONGREL  Copyright (C) 2023 Ricardo Prida
-        This program comes with ABSOLUTELY NO WARRANTY; for details type `show w'.
+        This program comes with ABSOLUTELY NO WARRANTY.
         This is free software, and you are welcome to redistribute it
         under certain conditions;
     """)
