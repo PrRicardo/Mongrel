@@ -1,4 +1,26 @@
+"""
+    MONGREL: MONgodb Going RELational
+    Copyright (C) 2023 Ricardo Prida
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+This class builds your configs
+"""
+
 import json
+import typing
+
 import pymongo
 from .map_flattener import flatten
 
@@ -7,13 +29,23 @@ class ConfigurationBuilder:
 
     @staticmethod
     def _make_name(path: str) -> str:
+        """
+        Make the name of the new field
+        :param path: the entire path
+        :return: the shortened path
+        """
         name_arr = path.split('.')
         if len(name_arr) >= 2:
             return name_arr[-2] + '_' + name_arr[-1]
         return name_arr[-1]
 
     @staticmethod
-    def _guess_type(value) -> str:
+    def _guess_type(value: typing.Any) -> str:
+        """
+        Type guessing function based on viewing a single value
+        :param value: The value to look at
+        :return: the inferred data type for the auto config
+        """
         if isinstance(value, bool):
             return "BOOLEAN"
         if isinstance(value, int):
@@ -27,6 +59,17 @@ class ConfigurationBuilder:
                             mongo_database: str, mongo_collection: str,
                             mongo_port: int = None, mongo_user: str = None,
                             mongo_password: str = None):
+        """
+        This method automatically generate the two required configuration files
+        :param relation_config_path: path to the relation config file
+        :param mapping_config_path: path to the mapping config file
+        :param mongo_host: the ip address or name of the mongo server
+        :param mongo_database: the database name of the source mongo
+        :param mongo_collection: the collection that stores the source documents
+        :param mongo_port: optional, the port of the source mongo database
+        :param mongo_user: optional, the user of the source mongo database
+        :param mongo_password: optional, the password of the user for the source database
+        """
         mongo_client = pymongo.MongoClient(host=mongo_host, port=mongo_port, username=mongo_user,
                                            password=mongo_password)
         db = mongo_client[mongo_database]

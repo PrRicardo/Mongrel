@@ -28,7 +28,7 @@
       "reference_keys": {
         "id": "PK"
       },
-      "alias": "music.interpret"
+      "alias": "music.artists"
     }
   },
   "music.alb_artists": {
@@ -39,7 +39,7 @@
       "reference_keys": {
         "id": "PK"
       },
-      "alias": "music.interpret"
+      "alias": "music.artists"
     }
   },
   "music.tracks": {
