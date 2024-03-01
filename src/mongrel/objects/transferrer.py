@@ -264,7 +264,7 @@ def transfer_data_from_mongo_to_postgres(relation_config_path: str, mapping_conf
             else:
                 print(
                     "You can supress this prompt by using the command line argument"
-                    " --skip-cascade-warning on launch")
+                    " --skip-cascade-warning on launch.")
     relation_builder = RelationBuilder()
     with open(relation_config_path, encoding='utf8') as relation_file:
         with open(mapping_config_path, encoding='utf8') as mapping_file:
