@@ -5,6 +5,7 @@ Manages the creation of tables with a creation statement
 import json
 from ..helpers.exceptions import MalformedMappingException
 from ..objects.relation import Relation
+from ..objects.enums import ConflictHandling
 
 
 class TableBuilder:
@@ -37,7 +38,7 @@ class TableBuilder:
             relation.prepare_columns(self._rel_dict)
         return self._relations
 
-    def _prepare_nm_relations(self, relations_vals:list):
+    def _prepare_nm_relations(self, relations_vals: list):
         """
         Creates the nm tables that are required to emulate n:m relations
         :param relations_vals: all tables with their relations
@@ -88,14 +89,50 @@ class TableBuilder:
             creation_stmt_inner = creation_stmt_inner + f'CREATE SCHEMA IF NOT EXISTS "{schema}";\n\n'
         return creation_stmt_inner
 
-    def make_creation_script(self) -> str:
+    def drop_script(self) -> str:
+        """
+        Creates the script that drops all previous tables
+        :return: The drop script
+        """
+        creation_stmt_inner = ""
+        for relation in self._relations:
+            if not relation.alias:
+                creation_stmt_inner = (creation_stmt_inner +
+                                       f'DROP TABLE IF EXISTS "{relation.info.schema}"."{relation.info.table}" '
+                                       f'CASCADE;\n')
+            else:
+                creation_stmt_inner = (creation_stmt_inner +
+                                       f'DROP TABLE IF EXISTS "{relation.alias.schema}"."{relation.alias.table}" '
+                                       f'CASCADE;\n')
+        creation_stmt_inner += "\n\n"
+        return creation_stmt_inner
+
+    def truncate_script(self) -> str:
+        """
+        Creates the script that truncate all previous tables
+        :return: The truncate script
+        """
+        creation_stmt_inner = ""
+        for relation in self._relations:
+            if not relation.alias:
+                creation_stmt_inner = (creation_stmt_inner +
+                                       f'TRUNCATE TABLE "{relation.info.schema}"."{relation.info.table}" CASCADE;\n')
+            else:
+                creation_stmt_inner = (creation_stmt_inner +
+                                       f'TRUNCATE TABLE "{relation.alias.schema}"."{relation.alias.table}" CASCADE;\n')
+        creation_stmt_inner += "\n\n"
+        return creation_stmt_inner
+
+    def make_creation_script(self, conflict_handling: ConflictHandling) -> str:
         """
         Builds the entire relationscript which can be used to initialize the database.
+        :param conflict_handling: Set to true if you want to drop the existing tables on the database with the same names
         :return: The creation statement
         :raise MalformedMappingException: If there are cyclic dependencies
         """
         creation_stmt_inner = self.create_schema_script()
         done = []
+        creation_stmt_inner += self.drop_script() if (conflict_handling == ConflictHandling.DROP) else ""
         # Creates the tables without n:1 relations
         for relation in self._relations:
             if relation not in done:
@@ -143,4 +180,5 @@ class TableBuilder:
             if progress == 0:
                 raise MalformedMappingException("There are cycles in the n:1 relations and therefore "
                                                 "no foreign key could be generated.")
+        creation_stmt_inner += self.truncate_script() if (conflict_handling == ConflictHandling.TRUNCATE) else ""
         return creation_stmt_inner

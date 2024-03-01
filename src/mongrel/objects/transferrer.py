@@ -6,12 +6,14 @@ from sqlalchemy import create_engine, URL, text
 import pandas as pd
 import pymongo
 from tqdm import tqdm
+import argparse
 
 from ..helpers.map_flattener import flatten
 from ..helpers.constants import PATH_SEP
 from ..objects.relation import Relation, RelationInfo
 from ..objects.relation_builder import RelationBuilder
 from ..objects.table_builder import TableBuilder
+from ..objects.enums import ConflictHandling
 from ..helpers.database_functions import insert_on_conflict_nothing
 
 
@@ -199,13 +201,35 @@ class Transferrer:
         mongo_client.close()
 
 
+def _parse_conflict_handling(conflict_handling: str = "Nothing") -> ConflictHandling:
+    """
+    Parsing of the string field for conflict handling to the enum
+    :param conflict_handling:Can be one of three values
+        "Nothing" if existing values should just be left alone
+        "Truncate" to truncate previous tables
+        "Delete" to delete previous tables
+    :return: the parsed enum
+    """
+    ret = ConflictHandling.NONE
+    if conflict_handling.lower() == "truncate":
+        ret = ConflictHandling.TRUNCATE
+    if conflict_handling.lower() == "delete" or conflict_handling.lower() == "drop":
+        ret = ConflictHandling.DROP
+    return ret
+
+
 def transfer_data_from_mongo_to_postgres(relation_config_path: str, mapping_config_path: str, mongo_host: str,
                                          mongo_database: str, mongo_collection: str,
                                          sql_host: str, sql_database: str, mongo_port: int = None, sql_port: int = None,
                                          sql_user: str = None, sql_password: str = None, mongo_user: str = None,
-                                         mongo_password: str = None, batch_size: int = 1000) -> None:
+                                         mongo_password: str = None, batch_size: int = 1000,
+                                         conflict_handling: str = "Nothing") -> None:
     """
     A wrapper for all the required steps taken for a transfer
+    :param conflict_handling: Can be one of three values
+        "Nothing" if existing values should just be left alone
+        "Truncate" to truncate previous tables
+        "Delete" to delete previous tables
     :param relation_config_path: path to the relation config file
     :param mapping_config_path: path to the mapping config file
     :param mongo_host: the ip address or name of the mongo server
@@ -221,12 +245,32 @@ def transfer_data_from_mongo_to_postgres(relation_config_path: str, mapping_conf
     :param mongo_password: optional, the password of the user for the source database
     :param batch_size: the batch size used
     """
+    parser = argparse.ArgumentParser(description="MONGREL transferrer to move data and such")
+    parser.add_argument("--skip-cascade-warning", action="store_true",
+                        help="Use this flag only if you know what you're doing! If you don't know what this flag does, "
+                             "DO NOT USE IT!")
+
+    args = parser.parse_args()
+
+    parsed_conflict_handling = _parse_conflict_handling(conflict_handling)
+    if parsed_conflict_handling == ConflictHandling.TRUNCATE or parsed_conflict_handling == ConflictHandling.DROP:
+        print("Dropping and Truncating tables needs to be done in a cascading manner, "
+              "this can lead to loss of data of non-relevant tables!")
+        if not args.skip_cascade_warning:
+            inp = input("If you know what you're doing type 'Yes, I know what I'm doing!'")
+            if inp.strip() != "Yes, I know what I'm doing!":
+                print("Cancelling...")
+                return
+            else:
+                print(
+                    "You can supress this prompt by using the command line argument"
+                    " --skip-cascade-warning on launch")
     relation_builder = RelationBuilder()
     with open(relation_config_path, encoding='utf8') as relation_file:
         with open(mapping_config_path, encoding='utf8') as mapping_file:
             relations = relation_builder.calculate_relations(json.load(relation_file), json.load(mapping_file))
     table_builder = TableBuilder(relations, mapping_config_path)
-    creation_stmt = table_builder.make_creation_script()
+    creation_stmt = table_builder.make_creation_script(parsed_conflict_handling)
     transferrer = Transferrer(table_builder.get_relations(), mongo_host, mongo_database, mongo_collection, sql_host,
                               sql_database, mongo_port, sql_port, sql_user, sql_password, mongo_user, mongo_password,
                               batch_size)

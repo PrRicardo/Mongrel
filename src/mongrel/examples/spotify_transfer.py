@@ -10,4 +10,4 @@ if __name__ == "__main__":
                                          "spotify_mappings.json", mongo_host="localhost",
                                          mongo_database="hierarchical_relational_test", mongo_collection="test_tracks",
                                          sql_host='127.0.0.1', sql_database='spotify', sql_user='postgres',
-                                         sql_port=5432, sql_password=os.getenv("PASSWORD"))
+                                         sql_port=5432, sql_password=os.getenv("PASSWORD"), conflict_handling="Drop")

@@ -1,15 +1,10 @@
 [build-system]
-requires = ["setuptools>=61.0",
-    "pandas",
-    "pymongo",
-    "sqlalchemy",
-    "tqdm"
-]
+requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "Mongrel"
-version = "0.0.4b"
+version = "0.0.4b8"
 authors = [
     { name = "Ricardo Prida", email = "mail.prida@gmail.com" },
 ]
@@ -21,14 +16,13 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
-
-[project.dependencies]
-numpy = "*"
-pandas = "*"
-pymongo = "*"
-sqlalchemy = "*"
-tqdm = "*"
-psycopg2 = "*"
+dependencies = [
+    "pandas ~= 2.2.1",
+    "pymongo ~= 4.6.2",
+    "sqlalchemy ~= 2.0.27",
+    "tqdm ~= 4.66.2",
+    "psycopg2-binary ~= 2.9.9"
+]
 
 [project.urls]
 Homepage = "https://github.com/PrRicardo/Mongrel"
