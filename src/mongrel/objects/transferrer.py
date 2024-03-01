@@ -1,4 +1,20 @@
 """
+    MONGREL: MONgodb Going RELational
+    Copyright (C) 2023 Ricardo Prida
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 Transfer Logic can be found here
 """
 import argparse
@@ -245,6 +261,12 @@ def transfer_data_from_mongo_to_postgres(relation_config_path: str, mapping_conf
     :param mongo_password: optional, the password of the user for the source database
     :param batch_size: the batch size used
     """
+    print("""
+        MONGREL  Copyright (C) 2023 Ricardo Prida
+        This program comes with ABSOLUTELY NO WARRANTY; for details type `show w'.
+        This is free software, and you are welcome to redistribute it
+        under certain conditions;
+    """)
     parser = argparse.ArgumentParser(description="MONGREL transferrer to move data and such")
     parser.add_argument("--skip-cascade-warning", action="store_true",
                         help="Use this flag only if you know what you're doing! If you don't know what this flag does, "
