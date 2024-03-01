@@ -1,12 +1,13 @@
 """
 Transfer Logic can be found here
 """
+import argparse
 import json
+
 from sqlalchemy import create_engine, URL, text
 import pandas as pd
 import pymongo
 from tqdm import tqdm
-import argparse
 
 from ..helpers.map_flattener import flatten
 from ..helpers.constants import PATH_SEP
@@ -210,12 +211,11 @@ def _parse_conflict_handling(conflict_handling: str = "Nothing") -> ConflictHand
         "Delete" to delete previous tables
     :return: the parsed enum
     """
-    ret = ConflictHandling.NONE
     if conflict_handling.lower() == "truncate":
-        ret = ConflictHandling.TRUNCATE
+        return ConflictHandling.TRUNCATE
     if conflict_handling.lower() == "delete" or conflict_handling.lower() == "drop":
-        ret = ConflictHandling.DROP
-    return ret
+        return ConflictHandling.DROP
+    return ConflictHandling.NONE
 
 
 def transfer_data_from_mongo_to_postgres(relation_config_path: str, mapping_config_path: str, mongo_host: str,
@@ -253,7 +253,7 @@ def transfer_data_from_mongo_to_postgres(relation_config_path: str, mapping_conf
     args = parser.parse_args()
 
     parsed_conflict_handling = _parse_conflict_handling(conflict_handling)
-    if parsed_conflict_handling == ConflictHandling.TRUNCATE or parsed_conflict_handling == ConflictHandling.DROP:
+    if parsed_conflict_handling in [ConflictHandling.TRUNCATE, ConflictHandling.DROP]:
         print("Dropping and Truncating tables needs to be done in a cascading manner, "
               "this can lead to loss of data of non-relevant tables!")
         if not args.skip_cascade_warning:
@@ -261,10 +261,9 @@ def transfer_data_from_mongo_to_postgres(relation_config_path: str, mapping_conf
             if inp.strip() != "Yes, I know what I'm doing!":
                 print("Cancelling...")
                 return
-            else:
-                print(
-                    "You can supress this prompt by using the command line argument"
-                    " --skip-cascade-warning on launch.")
+            print(
+                "You can supress this prompt by using the command line argument"
+                " --skip-cascade-warning on launch.")
     relation_builder = RelationBuilder()
     with open(relation_config_path, encoding='utf8') as relation_file:
         with open(mapping_config_path, encoding='utf8') as mapping_file:
