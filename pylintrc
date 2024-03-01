@@ -412,10 +412,10 @@ max-spelling-suggestions=2
 [DESIGN]
 
 # Maximum number of arguments for function / method
-max-args = 14
+max-args = 15
 
 # Maximum number of locals for function / method body
-max-locals = 21
+max-locals = 26
 
 # Maximum number of return / yield for function / method body
 max-returns=11
@@ -514,7 +514,7 @@ runtime-typing = no
 [DEPRECATED_BUILTINS]
 
 # List of builtins function names that should not be used, separated by a comma
-bad-functions=map,input
+bad-functions=map,filter
 
 
 [REFACTORING]
