@@ -3,8 +3,8 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "Mongrel"
-version = "0.0.4b8"
+name = "mongrel_transferrer"
+version = "0.0.1b3"
 authors = [
     { name = "Ricardo Prida", email = "mail.prida@gmail.com" },
 ]
@@ -13,7 +13,7 @@ readme = "README.md"
 requires-python = ">=3.8"
 classifiers = [
     "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
     "Operating System :: OS Independent",
 ]
 dependencies = [
