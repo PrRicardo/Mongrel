@@ -90,8 +90,16 @@ class Conversions:
         """
         if val is None or val == "":
             return None
-        parsed = datetime.strptime(val, kwargs["input_format"])
-        return parsed.strftime(kwargs["output_format"])
+        formats = kwargs["input_format"]
+        if not isinstance(formats, list):
+            formats = [formats]
+        for form in formats:
+            try:
+                parsed = datetime.strptime(val, form)
+                return parsed.strftime(kwargs["output_format"])
+            except ValueError:
+                pass
+        raise ValueError(f"Value {val} could not be converted with the given formats {formats}")
 
     @staticmethod
     def do_nothing(val: object):
