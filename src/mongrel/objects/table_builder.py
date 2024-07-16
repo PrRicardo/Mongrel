@@ -4,7 +4,7 @@ Manages the creation of tables with a creation statement
 
 import json
 from ..helpers.exceptions import MalformedMappingException
-from ..objects.relation import Relation
+from ..objects.table import Table
 
 
 class TableBuilder:
@@ -12,10 +12,10 @@ class TableBuilder:
     This class builds the creation statement of the database and manages some of the relations mentioned in the config
     and relation_builder
     """
-    _relations: list[Relation]
+    _relations: list[Table]
     _rel_dict: dict
 
-    def __init__(self, relations_vals: list[Relation], relation_file_path: str):
+    def __init__(self, relations_vals: list[Table], relation_file_path: str):
         """
         Initializes the class which is used to make the creation statement
         :param relations_vals: a list of all relations which

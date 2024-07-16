@@ -1,7 +1,7 @@
 """
 manages the creation of tables and their relations from the configuration file
 """
-from .relation import Relation, RelationInfo
+from .table import Table, TableInfo
 from ..helpers.constants import TRAN_OPTIONS
 
 
@@ -17,7 +17,7 @@ class RelationBuilder:
         example:
         {
             "a":{
-                "n":1":
+                "n:1":
                 {
                     "b":{}
                 },
@@ -66,11 +66,11 @@ class RelationBuilder:
         for relation_list in relation_lists:
             for idx, val in enumerate(relation_list):
                 if idx % 2 == 0:
-                    if RelationInfo(val) not in relations:
+                    if TableInfo(val) not in relations:
                         if TRAN_OPTIONS in mapping_dict[val]:
-                            relations.append(Relation(RelationInfo(val), mapping_dict[val][TRAN_OPTIONS]))
+                            relations.append(Table(TableInfo(val), mapping_dict[val][TRAN_OPTIONS]))
                         else:
-                            relations.append(Relation(RelationInfo(val)))
+                            relations.append(Table(TableInfo(val)))
         return relations
 
     @staticmethod
@@ -91,7 +91,7 @@ class RelationBuilder:
         return unique_relations
 
     @staticmethod
-    def parse_relations(info: RelationInfo, relation_list: list[str]) -> list[tuple[str, str]]:
+    def parse_relations(info: TableInfo, relation_list: list[str]) -> list[tuple[str, str]]:
         """
         For a list of relations, calculates all relations it has to other tables
         example for the following paths:

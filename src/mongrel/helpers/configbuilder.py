@@ -20,7 +20,7 @@ class ConfigurationBuilder:
             return "INTEGER"
         if isinstance(value, float):
             return "FLOAT"
-        return "CHARACTER VARYING (1023)"
+        return "TEXT"
 
     @staticmethod
     def build_configuration(relation_config_path: str, mapping_config_path: str, mongo_host: str,

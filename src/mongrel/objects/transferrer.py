@@ -9,7 +9,7 @@ from tqdm import tqdm
 
 from ..helpers.map_flattener import flatten
 from ..helpers.constants import PATH_SEP
-from ..objects.relation import Relation, RelationInfo
+from ..objects.table import Table, TableInfo
 from ..objects.relation_builder import RelationBuilder
 from ..objects.table_builder import TableBuilder
 from ..helpers.database_functions import insert_on_conflict_nothing
@@ -19,12 +19,12 @@ class Transferrer:
     """
     The main class that handles the transfer
     """
-    dependencies: dict[RelationInfo, list[RelationInfo]]
+    dependencies: dict[TableInfo, list[TableInfo]]
     batch_size: int
-    relations: list[Relation]
-    length_lookup: dict[RelationInfo, int]
+    relations: list[Table]
+    length_lookup: dict[TableInfo, int]
 
-    def __init__(self, relation_list: list[Relation], mongo_host: str, mongo_database: str, mongo_collection: str,
+    def __init__(self, relation_list: list[Table], mongo_host: str, mongo_database: str, mongo_collection: str,
                  sql_host: str, sql_database: str, mongo_port: int = None, sql_port: int = None, sql_user=None,
                  sql_password=None, mongo_user: str = None, mongo_password: str = None, batch_size=1000):
         """
@@ -76,14 +76,14 @@ class Transferrer:
                     connie.commit()
 
     @staticmethod
-    def create_dependencies(relation_list: list[Relation]) -> dict[RelationInfo, list[RelationInfo]]:
+    def create_dependencies(relation_list: list[Table]) -> dict[TableInfo, list[TableInfo]]:
         """
         Creates a dependency lookup for all the tables. This is required so that relations with foreign key relations
         get filled before their children.
         :param relation_list: a list of all relations
         :return: a dictionary lookup of relationInfo containing all tables that need to be filled before insertion
         """
-        dependencies: dict[RelationInfo, list[RelationInfo]] = {}
+        dependencies: dict[TableInfo, list[TableInfo]] = {}
         for relation in relation_list:
             for column in relation.columns:
                 if column.foreign_reference is not None:
@@ -100,13 +100,13 @@ class Transferrer:
         Creates the dataframes for all the relations
         :return: a dictionary containing dataframes with RelationInfo lookups
         """
-        data: dict[RelationInfo, pd.DataFrame] = {}
+        data: dict[TableInfo, pd.DataFrame] = {}
         for relation in self.relations:
             relation_info = relation.info if not relation.alias else relation.alias
             data[relation_info] = relation.make_df()
         return data
 
-    def filter_dict(self, doc: dict, relation: Relation, layer: int = 0):
+    def filter_dict(self, doc: dict, relation: Table, layer: int = 0):
         """
         Walks the dictionary and only looks at the relevant paths
         :param doc: a source document
@@ -129,7 +129,7 @@ class Transferrer:
             return vals
         return doc
 
-    def read_document_lines(self, doc: dict, relation: Relation) -> dict:
+    def read_document_lines(self, doc: dict, relation: Table) -> dict:
         """
         Reads the document with all the relevant information for the relation
         :param doc: the source document
@@ -156,7 +156,7 @@ class Transferrer:
                             return_values[col.target_name].append(" ")
         return return_values
 
-    def write_cascading(self, relation_info: RelationInfo, data: dict[RelationInfo, pd.DataFrame],
+    def write_cascading(self, relation_info: TableInfo, data: dict[TableInfo, pd.DataFrame],
                         connection: object) -> None:
         """
         Writes the relation and all prerequisite relations to the target database
@@ -180,7 +180,7 @@ class Transferrer:
                                            password=self.mongo_password)
         db = mongo_client[self.mongo_database]
         collie = db[self.mongo_collection]
-        data: dict[RelationInfo, pd.DataFrame] = self.create_data_dict()
+        data: dict[TableInfo, pd.DataFrame] = self.create_data_dict()
         url_object = URL.create("postgresql", username=self.sql_user, password=self.sql_password,
                                 host=self.sql_host, port=self.sql_port, database=self.sql_database)
         engine_go_brr = create_engine(url_object)
