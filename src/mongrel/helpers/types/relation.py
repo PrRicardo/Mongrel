@@ -1,4 +1,4 @@
-from ..helpers.relation_type import RelationType
+from ...helpers.types.relation_type import RelationType
 
 
 class Relation:

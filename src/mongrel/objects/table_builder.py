@@ -15,16 +15,15 @@ class TableBuilder:
     _relations: list[Table]
     _rel_dict: dict
 
-    def __init__(self, relations_vals: list[Table], relation_file_path: str):
+    def __init__(self, relations_vals: list[Table], relation_file_dict: dict):
         """
         Initializes the class which is used to make the creation statement
         :param relations_vals: a list of all relations which
-        :param relation_file_path: filepath to the relation
+        :param relation_file_dict: dict of the relation
         """
         self._relations = relations_vals
         self._rel_dict = self.prepare_rel_dict()
-        with open(relation_file_path, encoding="utf8") as relation_file_inner:
-            self.add_columns_to_relations(json.load(relation_file_inner))
+        self.add_columns_to_relations(relation_file_dict)
         self._relations = self._prepare_nm_relations(relations_vals)
 
     def get_relations(self):
@@ -37,20 +36,39 @@ class TableBuilder:
             relation.prepare_columns(self._rel_dict)
         return self._relations
 
-    def _prepare_nm_relations(self, relations_vals:list):
+    def _remove_references(self, table: Table, referenced_table: Table) -> Table:
+        info = referenced_table.alias if referenced_table.alias else referenced_table.info
+        for column in table.columns:
+            if column.foreign_reference == info:
+                column.foreign_reference = None
+        table.relations['n:1'].remove(referenced_table.info)
+        return table
+
+    def _prepare_nm_relations(self, relations_vals: list):
         """
         Creates the nm tables that are required to emulate n:m relations
         :param relations_vals: all tables with their relations
         :return: the new relations as a list
         """
-        for relation in relations_vals:
+        to_remove = []
+        for idx, relation in enumerate(relations_vals):
             if 'n:m' in relation.relations:
                 for nm_relation in relation.relations['n:m']:
                     nm_table = relation.create_nm_table(
                         relations_vals[relations_vals.index(nm_relation)], self._rel_dict)
+                    if len(relation.columns) == 1 and not relation.alias:
+                        nm_table = self._remove_references(nm_table, relation)
+                        to_remove.append(idx)
+                    if len(self._rel_dict[nm_relation].columns) == 1 and not self._rel_dict[nm_relation].alias:
+                        nm_table = self._remove_references(nm_table, self._rel_dict[nm_relation])
+                        to_remove.append(relations_vals.index(nm_relation))
                     if nm_table not in relations_vals:
                         relations_vals.append(nm_table)
-        return relations_vals
+        filtered = []
+        for idx, table in enumerate(relations_vals):
+            if idx not in to_remove:
+                filtered.append(table)
+        return filtered
 
     def prepare_rel_dict(self):
         """
@@ -85,7 +103,8 @@ class TableBuilder:
         for relation in self._relations:
             unique_schemas.add(relation.info.schema if not relation.alias else relation.alias.schema)
         for schema in unique_schemas:
-            creation_stmt_inner = creation_stmt_inner + f'CREATE SCHEMA IF NOT EXISTS "{schema}";\n\n'
+            if len(schema) > 0:
+                creation_stmt_inner = creation_stmt_inner + f'CREATE SCHEMA IF NOT EXISTS "{schema}";\n\n'
         return creation_stmt_inner
 
     def make_creation_script(self) -> str:
@@ -137,8 +156,9 @@ class TableBuilder:
                                         has_uninitialized_references = True
                             if not has_uninitialized_references:
                                 creation_stmt_inner = creation_stmt_inner + relation.make_creation_script(
-                                    self._rel_dict)
+                                    self._rel_dict, alias_relations)
                                 done.append(relation)
+                                done.extend(alias_relations)
                                 progress += 1
             if progress == 0:
                 raise MalformedMappingException("There are cycles in the n:1 relations and therefore "

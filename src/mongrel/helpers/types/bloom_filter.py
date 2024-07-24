@@ -13,7 +13,7 @@ class BloomFilter:
         self.size = math.ceil(
             (expected_values * math.log(false_positive_acceptance)) / math.log(1 / pow(2, math.log(2))))
         self.lookup = numpy.zeros(self.size, dtype=bool)
-        self.hash_functions = round((self.size / expected_values) * math.log(2))
+        self.hash_functions = round((self.size / expected_values) * math.log(2)) if expected_values > 0 else 0
 
     def hash(self, item: object):
         hash_value_life = mmh3.hash(str(item), 42, signed=False)

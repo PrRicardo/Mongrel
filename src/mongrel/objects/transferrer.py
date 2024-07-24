@@ -9,7 +9,7 @@ from tqdm import tqdm
 
 from ..helpers.map_flattener import flatten
 from ..helpers.constants import PATH_SEP
-from ..objects.table import Table, TableInfo
+from ..objects.table import Table, TableInfo, Field
 from ..objects.relation_builder import RelationBuilder
 from ..objects.table_builder import TableBuilder
 from ..helpers.database_functions import insert_on_conflict_nothing
@@ -19,7 +19,7 @@ class Transferrer:
     """
     The main class that handles the transfer
     """
-    dependencies: dict[TableInfo, list[TableInfo]]
+    dependencies: dict[str, list[TableInfo]]
     batch_size: int
     relations: list[Table]
     length_lookup: dict[TableInfo, int]
@@ -76,23 +76,24 @@ class Transferrer:
                     connie.commit()
 
     @staticmethod
-    def create_dependencies(relation_list: list[Table]) -> dict[TableInfo, list[TableInfo]]:
+    def create_dependencies(relation_list: list[Table]) -> dict[str, list[TableInfo]]:
         """
         Creates a dependency lookup for all the tables. This is required so that relations with foreign key relations
         get filled before their children.
         :param relation_list: a list of all relations
         :return: a dictionary lookup of relationInfo containing all tables that need to be filled before insertion
         """
-        dependencies: dict[TableInfo, list[TableInfo]] = {}
+        dependencies: dict[str, list[TableInfo]] = {}
         for relation in relation_list:
+            info = f'{relation.info.schema}.{relation.info.table}' if relation.alias is None else relation.alias
             for column in relation.columns:
                 if column.foreign_reference is not None:
-                    if relation.info in dependencies:
-                        dependencies[relation.info].append(column.foreign_reference)
+                    if info in dependencies:
+                        dependencies[info].append(column.foreign_reference)
                         # I don't know why but a duplicate check in the if-clause just does not work
-                        dependencies[relation.info] = list(set(dependencies[relation.info]))
+                        dependencies[info] = list(set(dependencies[info]))
                     else:
-                        dependencies[relation.info] = [column.foreign_reference]
+                        dependencies[info] = [column.foreign_reference]
         return dependencies
 
     def create_data_dict(self):
@@ -139,21 +140,22 @@ class Transferrer:
         return_values = {}
         rel_dict = self.filter_dict(doc, relation)
         flattened = flatten(rel_dict, path_separator=PATH_SEP)
-        for col in relation.columns:
-            if col.path:
-                if col.field_type.name != "PRIMARY_KEY":
-                    return_values[col.target_name] = [col.conversion_function(val[col.translated_path],
-                                                                              **col.conversion_args)
-                                                      if col.translated_path in val else None
-                                                      for val in flattened]
-                else:
-                    return_values[col.target_name] = []
-                    for val in flattened:
-                        if col.translated_path in val and val[col.translated_path] is not None:
-                            return_values[col.target_name].append(col.conversion_function(val[col.translated_path],
-                                                                                          **col.conversion_args))
-                        else:
-                            return_values[col.target_name].append(" ")
+        for row in flattened:
+            ok = True
+            for col in relation.columns:
+                if col.field_type == Field.PRIMARY_KEY:
+                    if col.translated_path not in row or row[col.translated_path] is None:
+                        ok = False
+                        break
+            if not ok:
+                continue
+            for col in relation.columns:
+                if col.path:
+                    if col.translated_path in row:
+                        return_values.setdefault(col.target_name, []).append(col.conversion_function(
+                            row[col.translated_path], **col.conversion_args))
+                    else:
+                        return_values.setdefault(col.target_name, []).append(None)
         return return_values
 
     def write_cascading(self, relation_info: TableInfo, data: dict[TableInfo, pd.DataFrame],
@@ -188,10 +190,14 @@ class Transferrer:
             for doc in tqdm(collie.find()):
                 for relation in self.relations:
                     vals = self.read_document_lines(doc, relation)
-                    df = pd.DataFrame.from_dict(vals, orient='index').transpose()
+                    if vals != {}:
+                        df = pd.DataFrame.from_dict(vals, orient='index').transpose()
+                        relation_info = relation.info if not relation.alias else relation.alias
+                        data[relation_info] = pd.concat([data[relation_info], df], ignore_index=True)
+                        data[relation_info].drop_duplicates(relation.pks)
+                for relation in self.relations:
                     relation_info = relation.info if not relation.alias else relation.alias
-                    data[relation_info] = pd.concat([data[relation_info], df], ignore_index=True)
-                    if len(data[relation_info]) > self.batch_size:
+                    if len(data[relation_info].index) > self.batch_size:
                         self.write_cascading(relation_info, data, connie)
             for relation in self.relations:
                 relation_info = relation.info if not relation.alias else relation.alias
@@ -199,15 +205,15 @@ class Transferrer:
         mongo_client.close()
 
 
-def transfer_data_from_mongo_to_postgres(relation_config_path: str, mapping_config_path: str, mongo_host: str,
+def transfer_data_from_mongo_to_postgres(relation_config_dict: dict, mapping_config_path_dict: dict, mongo_host: str,
                                          mongo_database: str, mongo_collection: str,
                                          sql_host: str, sql_database: str, mongo_port: int = None, sql_port: int = None,
                                          sql_user: str = None, sql_password: str = None, mongo_user: str = None,
                                          mongo_password: str = None, batch_size: int = 1000) -> None:
     """
     A wrapper for all the required steps taken for a transfer
-    :param relation_config_path: path to the relation config file
-    :param mapping_config_path: path to the mapping config file
+    :param relation_config_dict: dict of the relation config file
+    :param mapping_config_path_dict: dict of the mapping config file
     :param mongo_host: the ip address or name of the mongo server
     :param mongo_database: the database name of the source mongo
     :param mongo_collection: the collection that stores the source documents
@@ -222,10 +228,8 @@ def transfer_data_from_mongo_to_postgres(relation_config_path: str, mapping_conf
     :param batch_size: the batch size used
     """
     relation_builder = RelationBuilder()
-    with open(relation_config_path, encoding='utf8') as relation_file:
-        with open(mapping_config_path, encoding='utf8') as mapping_file:
-            relations = relation_builder.calculate_relations(json.load(relation_file), json.load(mapping_file))
-    table_builder = TableBuilder(relations, mapping_config_path)
+    relations = relation_builder.calculate_relations(relation_config_dict, mapping_config_path_dict)
+    table_builder = TableBuilder(relations, mapping_config_path_dict)
     creation_stmt = table_builder.make_creation_script()
     transferrer = Transferrer(table_builder.get_relations(), mongo_host, mongo_database, mongo_collection, sql_host,
                               sql_database, mongo_port, sql_port, sql_user, sql_password, mongo_user, mongo_password,

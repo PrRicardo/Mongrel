@@ -7,6 +7,8 @@ from ..helpers.constants import PATH_SEP, CONVERSION_FIELDS, ALIAS, CONV_ARGS, R
     TARGET_TYPE, SOURCE_TYPE
 from ..helpers.conversions import Conversions
 from ..helpers.exceptions import MalformedMappingException
+from ..helpers.utils import decide_sql_definition
+from typing import Any
 
 
 class Field(Enum):
@@ -81,6 +83,7 @@ class Column:
     field_type: Field
     foreign_reference: TableInfo
     conversion_args: dict
+    conversion_function: Any
 
     def __init__(self, target_name: str, path: list[str], sql_definition: str, field_type: Field,
                  foreign_reference: TableInfo = None, conversion_function=None,
@@ -144,6 +147,7 @@ class Table:
     columns: list[Column]
     prepped: bool
     alias: TableInfo
+    pks: list[str]
 
     def __init__(self, info, options: dict = None):
         """
@@ -158,6 +162,7 @@ class Table:
         if options is None:
             options = {}
         self.alias = TableInfo(options[ALIAS]) if ALIAS in options else None
+        self.pks = []
 
     def __eq__(self, other):
         """
@@ -185,6 +190,7 @@ class Table:
             if col.path is not None:
                 collie_strs.append(col.target_name)
         df = pd.DataFrame(columns=collie_strs)
+        df.set_index(self.pks)
         return df
 
     def add_relations(self, relation_list: list[tuple[str, str]]) -> None:
@@ -235,6 +241,9 @@ class Table:
                             Column(f'{rel_info.table}_{other_col.target_name}', other_col.path,
                                    other_col.sql_definition,
                                    Field.PRIMARY_KEY if fk_are_pk else Field.FOREIGN_KEY, rel_info))
+        for column in self.columns:
+            if column.field_type == Field.PRIMARY_KEY and column.target_name not in self.pks:
+                self.pks.append(column.target_name)
         self.prepped = True
 
     def get_alias_relations(self, other_relations: list) -> list:
@@ -255,13 +264,20 @@ class Table:
         :return: returns the creation stmt part of the columns
         """
         creation_stmt = ''
+        creation_dict = {}
         for col in self.columns:
-            creation_stmt += f'\t"{col.target_name}" {col.sql_definition},\n'
+            if col.target_name not in creation_dict:
+                creation_dict[col.target_name] = col.sql_definition
         if alias_relations:
             for alias_relation in alias_relations:
                 for col in alias_relation.columns:
-                    if col not in self.columns:
-                        creation_stmt += f'\t"{col.target_name}" {col.sql_definition},\n'
+                    if col.target_name not in creation_dict:
+                        creation_dict[col.target_name] = col.sql_definition
+                    elif col.sql_definition != creation_dict[col.target_name]:
+                        creation_dict[col.target_name] = decide_sql_definition(col.sql_definition,
+                                                                               creation_dict[col.target_name]).upper()
+        for target_name, sql_definition in creation_dict.items():
+            creation_stmt += f'\t"{target_name}" {sql_definition},\n'
         return creation_stmt
 
     def write_primary_key(self, alias_relations: list = None):
@@ -271,15 +287,18 @@ class Table:
         :return: the creation stmt part that defines the primary key
         """
         creation_stmt = "\tPRIMARY KEY("
+        pks = set()
         for col in self.columns:
             if col.field_type == Field.PRIMARY_KEY:
-                creation_stmt += f'"{col.target_name}", '
+                pks.add(col.target_name)
         if alias_relations:
             for alias_relation in alias_relations:
                 for col in alias_relation.columns:
                     if col not in self.columns:
                         if col.field_type == Field.PRIMARY_KEY:
-                            creation_stmt += f'"{col.target_name}", '
+                            pks.add(col.target_name)
+        for pk in pks:
+            creation_stmt += f'"{pk}", '
         creation_stmt = creation_stmt[:-2]
         creation_stmt += "),\n"
         return creation_stmt
@@ -329,6 +348,10 @@ class Table:
         """
         if not self.prepped:
             self.prepare_columns(other_relations)
+        if alias_relations:
+            for alias_relation in alias_relations:
+                if not alias_relation.prepped:
+                    alias_relation.prepare_columns(other_relations)
         pk_count = self.count_primary_key_fields(alias_relations)
         schema_name = self.alias.schema if self.alias else self.info.schema
         table_name = self.alias.table if self.alias else self.info.table
