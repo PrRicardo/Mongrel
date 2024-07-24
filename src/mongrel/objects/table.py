@@ -2,13 +2,13 @@
 This file contains the main logic for the objects in the transfers.
 """
 from enum import Enum
+from typing import Any
 import pandas as pd
 from ..helpers.constants import PATH_SEP, CONVERSION_FIELDS, ALIAS, CONV_ARGS, REFERENCE_KEY, TRAN_OPTIONS, \
     TARGET_TYPE, SOURCE_TYPE
 from ..helpers.conversions import Conversions
 from ..helpers.exceptions import MalformedMappingException
 from ..helpers.utils import decide_sql_definition
-from typing import Any
 
 
 class Field(Enum):

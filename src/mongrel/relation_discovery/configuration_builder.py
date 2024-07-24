@@ -14,12 +14,11 @@ class ConfigurationBuilder:
     def _interpret_relation_type(relation_type: RelationType) -> str:
         if relation_type == RelationType.r_1ton:
             return '1:n'
-        elif relation_type == RelationType.r_1to1:
+        if relation_type == RelationType.r_1to1:
             return '1:1'
-        elif relation_type == RelationType.r_nto1:
+        if relation_type == RelationType.r_nto1:
             return 'n:1'
-        else:
-            return 'n:m'
+        return 'n:m'
 
     @staticmethod
     def choose_primary_key_candidate(column_infos: dict):
@@ -29,19 +28,18 @@ class ConfigurationBuilder:
                 length_num = re.search(r'\((\d+)\)', sql_type)
                 length_inner = 4095 if not length_num else int(length_num.group(1))
                 return 'string', length_inner
-            elif 'int' in sql_type:
+            if 'int' in sql_type:
                 return 'integer', None
-            elif 'float' in sql_type or 'double' in sql_type:
+            if 'float' in sql_type or 'double' in sql_type:
                 return 'float', None
-            elif 'numeric' in sql_type:
-                precision, scale = map(int, re.search(r'\((\d+),(\d+)\)', sql_type).groups())
-                return 'numeric', (precision, scale)
-            elif 'boolean' in sql_type:
+            if 'numeric' in sql_type:
+                precision, scale = (re.search(r'\((\d+),(\d+)\)', sql_type).groups())
+                return 'numeric', (int(precision), int(scale))
+            if 'boolean' in sql_type:
                 return 'boolean', None
-            elif 'date' in sql_type or 'timestamp' in sql_type:
+            if 'date' in sql_type or 'timestamp' in sql_type:
                 return 'datetime', None
-            else:
-                return 'unknown', None
+            return 'unknown', None
 
         candidate_scores = []
         for name, sql_type in column_infos.items():

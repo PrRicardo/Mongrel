@@ -17,9 +17,9 @@ def decide_sql_definition(type1, type2):
         return 'float' if 'float' in (type1, type2) else max(type1, type2, key=numeric_types.index)
 
     if type1.startswith('numeric') and type2.startswith('numeric'):
-        p1, s1 = map(int, type1.split('(')[1].strip(')').split(','))
-        p2, s2 = map(int, type2.split('(')[1].strip(')').split(','))
-        return f'numeric({max(p1, p2)},{max(s1, s2)})'
+        p1, s1 = (type1.split('(')[1].strip(')').split(','))
+        p2, s2 = (type2.split('(')[1].strip(')').split(','))
+        return f'numeric({max(int(p1), int(p2))},{max(int(s1), int(s2))})'
 
     # Date and time types
     if 'date' in (type1, type2) and 'timestamp' in (type1, type2):

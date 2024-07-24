@@ -1,6 +1,6 @@
+from typing import Any
 from ...helpers.types.bloom_filter import BloomFilter
 from ...helpers.types.data_type import Datatype
-from typing import Any
 
 
 class ColumnInfo:
@@ -43,8 +43,7 @@ class ColumnInfo:
             self.data_type = data_type
         if data_type == Datatype.TEXT:
             stringified_value = str(value)
-            if self.length < len(stringified_value):
-                self.length = len(stringified_value)
+            self.length = max(self.length, len(stringified_value))
         if value in self.values:
             self.unique = False
             return True

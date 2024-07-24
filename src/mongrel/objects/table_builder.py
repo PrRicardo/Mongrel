@@ -2,7 +2,6 @@
 Manages the creation of tables with a creation statement
 """
 
-import json
 from ..helpers.exceptions import MalformedMappingException
 from ..objects.table import Table
 

@@ -1,7 +1,6 @@
-import mmh3
-
-import numpy
 import math
+import mmh3
+import numpy
 
 
 class BloomFilter:
@@ -22,10 +21,7 @@ class BloomFilter:
             yield (hash_value_life + i * hash_value_blaze) % self.size
 
     def check(self, item: object) -> bool:
-        for i in self.hash(item):
-            if not self.lookup[i]:
-                return False
-        return True
+        return all(self.lookup[i] for i in self.hash(item))
 
     def add(self, item: object, checked: bool = False):
         if not checked:

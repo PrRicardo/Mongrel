@@ -190,7 +190,7 @@ class Transferrer:
             for doc in tqdm(collie.find()):
                 for relation in self.relations:
                     vals = self.read_document_lines(doc, relation)
-                    if vals != {}:
+                    if vals:
                         df = pd.DataFrame.from_dict(vals, orient='index').transpose()
                         relation_info = relation.info if not relation.alias else relation.alias
                         data[relation_info] = pd.concat([data[relation_info], df], ignore_index=True)
