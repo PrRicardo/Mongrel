@@ -2,4 +2,4 @@ pandas
 pymongo
 sqlalchemy
 tqdm
-numpy
+mmh3

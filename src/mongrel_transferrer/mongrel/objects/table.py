@@ -18,11 +18,13 @@
 This file contains the main logic for the objects in the transfers.
 """
 from enum import Enum
+from typing import Any
 import pandas as pd
 from ..helpers.constants import PATH_SEP, CONVERSION_FIELDS, ALIAS, CONV_ARGS, REFERENCE_KEY, TRAN_OPTIONS, \
     TARGET_TYPE, SOURCE_TYPE
 from ..helpers.conversions import Conversions
 from ..helpers.exceptions import MalformedMappingException
+from ..helpers.utils import decide_sql_definition
 
 
 class Field(Enum):
@@ -34,7 +36,7 @@ class Field(Enum):
     BASE = 2
 
 
-class RelationInfo:
+class TableInfo:
     """
     Relation Info objects describe the name of the relations used. They can have a schema and always need a table_name.
     """
@@ -64,7 +66,7 @@ class RelationInfo:
         """
         Overloaded to make it a little bit easier to compare
         """
-        if isinstance(other, RelationInfo):
+        if isinstance(other, TableInfo):
             if other.table == self.table and other.schema == self.schema:
                 return True
         else:
@@ -95,11 +97,12 @@ class Column:
     translated_path: str
     sql_definition: str
     field_type: Field
-    foreign_reference: RelationInfo
+    foreign_reference: TableInfo
     conversion_args: dict
+    conversion_function: Any
 
     def __init__(self, target_name: str, path: list[str], sql_definition: str, field_type: Field,
-                 foreign_reference: RelationInfo = None, conversion_function=None,
+                 foreign_reference: TableInfo = None, conversion_function=None,
                  conversion_args=None):
         """
         Initalization of the column
@@ -150,16 +153,17 @@ class Column:
         return hash(self.target_name + str(self.path) + self.sql_definition + str(self.field_type))
 
 
-class Relation:
+class Table:
     """
     This class is representing the relations/tables. It contains information about the columns, existing relations to
     other tables, information on naming and aliases
     """
-    info: RelationInfo
-    relations: dict[str, list[RelationInfo]]
+    info: TableInfo
+    relations: dict[str, list[TableInfo]]
     columns: list[Column]
     prepped: bool
-    alias: RelationInfo
+    alias: TableInfo
+    pks: list[str]
 
     def __init__(self, info, options: dict = None):
         """
@@ -173,7 +177,8 @@ class Relation:
         self.prepped = False
         if options is None:
             options = {}
-        self.alias = RelationInfo(options[ALIAS]) if ALIAS in options else None
+        self.alias = TableInfo(options[ALIAS]) if ALIAS in options else None
+        self.pks = []
 
     def __eq__(self, other):
         """
@@ -183,10 +188,10 @@ class Relation:
         :param other: a RelationInfo or Relation object
         :return: Boolean representing equality
         """
-        if isinstance(other, RelationInfo):
+        if isinstance(other, TableInfo):
             if other == self.info:
                 return True
-        if isinstance(other, Relation):
+        if isinstance(other, Table):
             if other.info == self.info and self.relations == other.relations:
                 return True
         return False
@@ -201,6 +206,7 @@ class Relation:
             if col.path is not None:
                 collie_strs.append(col.target_name)
         df = pd.DataFrame(columns=collie_strs)
+        df.set_index(self.pks)
         return df
 
     def add_relations(self, relation_list: list[tuple[str, str]]) -> None:
@@ -211,9 +217,9 @@ class Relation:
         for key, val in relation_list:
             if key in self.relations:
                 if val not in self.relations[key]:
-                    self.relations[key].append(RelationInfo(val))
+                    self.relations[key].append(TableInfo(val))
             else:
-                self.relations[key] = [RelationInfo(val)]
+                self.relations[key] = [TableInfo(val)]
 
     def parse_column_dict(self, rel_dict: dict) -> None:
         """
@@ -251,6 +257,9 @@ class Relation:
                             Column(f'{rel_info.table}_{other_col.target_name}', other_col.path,
                                    other_col.sql_definition,
                                    Field.PRIMARY_KEY if fk_are_pk else Field.FOREIGN_KEY, rel_info))
+        for column in self.columns:
+            if column.field_type == Field.PRIMARY_KEY and column.target_name not in self.pks:
+                self.pks.append(column.target_name)
         self.prepped = True
 
     def get_alias_relations(self, other_relations: list) -> list:
@@ -271,13 +280,20 @@ class Relation:
         :return: returns the creation stmt part of the columns
         """
         creation_stmt = ''
+        creation_dict = {}
         for col in self.columns:
-            creation_stmt += f'\t"{col.target_name}" {col.sql_definition},\n'
+            if col.target_name not in creation_dict:
+                creation_dict[col.target_name] = col.sql_definition
         if alias_relations:
             for alias_relation in alias_relations:
                 for col in alias_relation.columns:
-                    if col not in self.columns:
-                        creation_stmt += f'\t"{col.target_name}" {col.sql_definition},\n'
+                    if col.target_name not in creation_dict:
+                        creation_dict[col.target_name] = col.sql_definition
+                    elif col.sql_definition != creation_dict[col.target_name]:
+                        creation_dict[col.target_name] = decide_sql_definition(col.sql_definition,
+                                                                               creation_dict[col.target_name]).upper()
+        for target_name, sql_definition in creation_dict.items():
+            creation_stmt += f'\t"{target_name}" {sql_definition},\n'
         return creation_stmt
 
     def write_primary_key(self, alias_relations: list = None):
@@ -287,15 +303,18 @@ class Relation:
         :return: the creation stmt part that defines the primary key
         """
         creation_stmt = "\tPRIMARY KEY("
+        pks = set()
         for col in self.columns:
             if col.field_type == Field.PRIMARY_KEY:
-                creation_stmt += f'"{col.target_name}", '
+                pks.add(col.target_name)
         if alias_relations:
             for alias_relation in alias_relations:
                 for col in alias_relation.columns:
                     if col not in self.columns:
                         if col.field_type == Field.PRIMARY_KEY:
-                            creation_stmt += f'"{col.target_name}", '
+                            pks.add(col.target_name)
+        for pk in pks:
+            creation_stmt += f'"{pk}", '
         creation_stmt = creation_stmt[:-2]
         creation_stmt += "),\n"
         return creation_stmt
@@ -311,13 +330,13 @@ class Relation:
         if "n:1" in self.relations:
             for rel in self.relations["n:1"]:
                 appendix = other_relations[rel].alias.table if other_relations[rel].alias else rel.table
-                creation_stmt += Relation.make_foreign_key(other_relations[rel], f'{appendix}_')
+                creation_stmt += Table.make_foreign_key(other_relations[rel], f'{appendix}_')
         if alias_relations:
             for alias_relation in alias_relations:
                 if "n:1" in alias_relation.relations:
                     for rel in alias_relation.relations["n:1"]:
                         appendix = other_relations[rel].alias.table if other_relations[rel].alias else rel.table
-                        creation_stmt += Relation.make_foreign_key(other_relations[rel], f'{appendix}_')
+                        creation_stmt += Table.make_foreign_key(other_relations[rel], f'{appendix}_')
         return creation_stmt
 
     def count_primary_key_fields(self, alias_relations: list = None):
@@ -345,6 +364,10 @@ class Relation:
         """
         if not self.prepped:
             self.prepare_columns(other_relations)
+        if alias_relations:
+            for alias_relation in alias_relations:
+                if not alias_relation.prepped:
+                    alias_relation.prepare_columns(other_relations)
         pk_count = self.count_primary_key_fields(alias_relations)
         schema_name = self.alias.schema if self.alias else self.info.schema
         table_name = self.alias.table if self.alias else self.info.table
@@ -360,13 +383,14 @@ class Relation:
         return creation_stmt
 
     @staticmethod
-    def make_foreign_key(relation:object, appendix: str = ""):
+    def make_foreign_key(relation: object, appendix: str = ""):
         """
         writes a single foreign key
         :param relation: the relation that is used as the foreign key base
         :param appendix: the appendix for the columns of the other table
         :return: returns the single foreign key fo the relation
         """
+        assert isinstance(relation, Table)
         relation_schema = relation.alias.schema if relation.alias else relation.info.schema
         relation_table = relation.alias.table if relation.alias else relation.info.table
         creation_stmt = '\tFOREIGN KEY ('
@@ -391,10 +415,10 @@ class Relation:
         :param other_relations: all the other relations in a dict [RelationInfo, Relation]
         :return: returns the created helper relation that has n:1 relations to the other tables
         """
-        assert isinstance(other, Relation), "Something went wrong when creating a nm table"
+        assert isinstance(other, Table), "Something went wrong when creating a nm table"
         own_name = self.info.table if not self.alias else self.alias.table
         other_name = other.info.table if not other.alias else other.alias.table
-        return_relation = Relation(RelationInfo(schema=self.info.schema, table=f'{own_name}2{other_name}'))
+        return_relation = Table(TableInfo(schema=self.info.schema, table=f'{own_name}2{other_name}'))
         return_relation.relations["n:1"] = [self.info, other.info]
         return_relation.prepare_columns(other_relations, fk_are_pk=True)
         return return_relation

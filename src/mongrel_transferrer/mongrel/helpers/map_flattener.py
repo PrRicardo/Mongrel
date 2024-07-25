@@ -146,6 +146,8 @@ def flatten_nested_objects(object_: Serializable,
     :param path_separator: the path seperator used for the prefix
     :return: the flattened object
     """
+    if len(prefix) == 0:
+        return object_
     return {prefix[:-len(path_separator)]: object_}
 
 

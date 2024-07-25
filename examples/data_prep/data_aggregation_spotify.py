@@ -80,7 +80,7 @@ def aggregate_spotify_data():
                                         "playlist-read-collaborative,user-follow-read,user-top-read,"
                                         "user-read-recently-played,user-library-read,user-read-email,"
                                         "user-read-private",
-                                  redirect_uri="localhost:8080"))
+                                  redirect_uri="127.0.0.1:8080"))
     playlists = fetch_playlists(client)
     tracks_inner = fetch_songs_of_playlists(client, playlists['items'])
     return tracks_inner

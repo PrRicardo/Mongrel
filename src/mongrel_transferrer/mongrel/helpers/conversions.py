@@ -59,7 +59,19 @@ class Conversions:
                 return Conversions.remove_null_characters
             if target_type.lower() == "spotify_date":
                 return Conversions.string_to_spotify_date
+        if source_type.lower() == "object":
+            if target_type.lower() == "string":
+                return Conversions.object_to_str
         raise NotImplementedError(f"The conversion of {source_type} to {target_type} is not implemented!")
+
+    @staticmethod
+    def object_to_str(val: object):
+        """
+        calls the to string method of val
+        :param val: the value that needs to be converted
+        :return: string of value
+        """
+        return str(val)
 
     @staticmethod
     def string_to_spotify_date(val: str, **kwargs):
