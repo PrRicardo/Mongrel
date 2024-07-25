@@ -1,4 +1,20 @@
 """
+    MONGREL: MONgodb Going RELational
+    Copyright (C) 2023 Ricardo Prida
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 This file contains the conversions used for all the datatypes. Add new conversion functions here.
 example:
     ...
@@ -86,8 +102,16 @@ class Conversions:
         """
         if val is None or val == "":
             return None
-        parsed = datetime.strptime(val, kwargs["input_format"])
-        return parsed.strftime(kwargs["output_format"])
+        formats = kwargs["input_format"]
+        if not isinstance(formats, list):
+            formats = [formats]
+        for form in formats:
+            try:
+                parsed = datetime.strptime(val, form)
+                return parsed.strftime(kwargs["output_format"])
+            except ValueError:
+                pass
+        raise ValueError(f"Value {val} could not be converted with the given formats {formats}")
 
     @staticmethod
     def do_nothing(val: object):
