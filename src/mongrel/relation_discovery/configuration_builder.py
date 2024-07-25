@@ -1,11 +1,12 @@
+from __future__ import annotations
 import math
+
+import pymongo
+import re
 
 from ..helpers.types.data_type import Datatype
 from ..helpers.types.relation_type import RelationType
 from .relation_discovery import RelationDiscovery
-from typing import Tuple
-import pymongo
-import re
 
 
 class ConfigurationBuilder:
@@ -42,6 +43,7 @@ class ConfigurationBuilder:
             return 'unknown', None
 
         candidate_scores = []
+        numtypes = {'float', 'numeric'}
         for name, sql_type in column_infos.items():
             if name == "id":
                 return name
@@ -53,7 +55,7 @@ class ConfigurationBuilder:
                 score += 2  # Then strings
                 if length:
                     score += 20 / length  # Prefer shorter strings
-            elif dtype in ['float', 'numeric']:
+            elif dtype in numtypes:
                 score += 1  # Then floats and numerics
 
             # No additional scores for other types
@@ -66,7 +68,7 @@ class ConfigurationBuilder:
 
     @staticmethod
     def build_configuration(collection: pymongo.collection.Collection, schema_name: str = "public", cutoff=1.0) -> \
-            Tuple[dict, dict]:
+            tuple[dict, dict]:
         relation_info = RelationDiscovery.get_relation_info(collection, cutoff)
         mappings = {}
         relations = {}
@@ -80,8 +82,8 @@ class ConfigurationBuilder:
                     if column_info.data_type == Datatype.NOT_ADAPTABLE:
                         mappings[table_name]['transfer_options'].setdefault("conversion_fields", {})[name] = {
                             "source_type": "object", "target_type": "string"}
-                        sql_definition = f"CHARACTER VARYING"
-                    elif ((column_info.data_type == Datatype.TEXT or column_info.data_type == Datatype.NOT_ADAPTABLE)
+                        sql_definition = "CHARACTER VARYING"
+                    elif ((column_info.data_type in (Datatype.TEXT, Datatype.NOT_ADAPTABLE))
                           and column_info.length < 256):
                         length = pow(2, math.ceil(math.log(column_info.length + 1) / math.log(2))) - 1
                         sql_definition = f"CHARACTER VARYING({length})"

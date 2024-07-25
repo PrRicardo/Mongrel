@@ -1,18 +1,18 @@
-from typing import Tuple
+from __future__ import annotations
 
 import pymongo
+from tqdm import tqdm
 
 from ..helpers.types.column_info import ColumnInfo
 from ..helpers.types.relation_type import RelationType
 from ..helpers.types.relation import Relation
-from tqdm import tqdm
 
 
 class RelationDiscovery:
 
     @staticmethod
     def process_document(document: dict, tables: dict, base_name: str, expected_values: int,
-                         processed: dict = None, current_path: list = None) -> Tuple[dict, dict]:
+                         processed: dict = None, current_path: list = None) -> tuple[dict, dict]:
         """
         This function calculates for all values if they are unique and whether the values of underlying documents
         are unique. The final structure looks as follows:
@@ -31,6 +31,7 @@ class RelationDiscovery:
         :param base_name: the name of the base_document which gets crawled
         :param expected_values: amount of expected values to create the bloom filters
         :param processed: dictionary that contains all processed documents
+        :param current_path: the path of the current subdocument, required for dynamic programming
         :return:
         """
         if processed is None:
@@ -65,21 +66,17 @@ class RelationDiscovery:
                     tables, processed = RelationDiscovery.process_document({key: list_item}, tables, base_name,
                                                                            expected_values, processed,
                                                                            current_path=current_path)
-            else:
-                if item is not None:
-                    if key not in tables[base_name]["columns"]:
-                        tables[base_name]["columns"][key] = ColumnInfo(expected_values, path=path)
-                    tables[base_name]["columns"][key].add_value(item)
+            elif item is not None:
+                if key not in tables[base_name]["columns"]:
+                    tables[base_name]["columns"][key] = ColumnInfo(expected_values, path=path)
+                tables[base_name]["columns"][key].add_value(item)
         return tables, processed
 
     @staticmethod
     def has_same_columns(columns: list[str], to_comp: dict) -> bool:
         if len(columns) != len(to_comp):
             return False
-        for key, _ in to_comp.items():
-            if key not in columns:
-                return False
-        return True
+        return any(key not in columns for key, _ in to_comp.items())
 
     @staticmethod
     def check_doubles(to_check: dict, tables: dict) -> list[str]:
@@ -102,11 +99,10 @@ class RelationDiscovery:
                             dict_of_relations[key].append(Relation(key, right_name, RelationType.r_1ton))
                         else:
                             dict_of_relations[key].append(Relation(key, right_name, RelationType.r_ntom))
+                    elif column_info.unique:
+                        dict_of_relations[key].append(Relation(key, right_name, RelationType.r_1to1))
                     else:
-                        if column_info.unique:
-                            dict_of_relations[key].append(Relation(key, right_name, RelationType.r_1to1))
-                        else:
-                            dict_of_relations[key].append(Relation(key, right_name, RelationType.r_nto1))
+                        dict_of_relations[key].append(Relation(key, right_name, RelationType.r_nto1))
                 elif column_info.is_list and right_name in tables:
                     dict_of_relations[key].append(Relation(key, right_name, RelationType.r_ntom))
         return dict_of_relations

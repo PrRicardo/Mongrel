@@ -1,7 +1,6 @@
 """
 Transfer Logic can be found here
 """
-import json
 from sqlalchemy import create_engine, URL, text
 import pandas as pd
 import pymongo
