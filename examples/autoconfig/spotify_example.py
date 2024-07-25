@@ -1,7 +1,7 @@
 import os
 import pymongo
-from src.mongrel.relation_discovery.configuration_builder import ConfigurationBuilder
-from src.mongrel.objects.transferrer import transfer_data_from_mongo_to_postgres
+from src.mongrel import ConfigurationBuilder
+from src.mongrel import transfer_data_from_mongo_to_postgres
 
 if __name__ == "__main__":
     client = pymongo.MongoClient('localhost', 27017)

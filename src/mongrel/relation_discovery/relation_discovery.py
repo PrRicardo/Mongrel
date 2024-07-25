@@ -76,7 +76,7 @@ class RelationDiscovery:
     def has_same_columns(columns: list[str], to_comp: dict) -> bool:
         if len(columns) != len(to_comp):
             return False
-        return any(key not in columns for key, _ in to_comp.items())
+        return not any(key not in columns for key, _ in to_comp.items())
 
     @staticmethod
     def check_doubles(to_check: dict, tables: dict) -> list[str]:
