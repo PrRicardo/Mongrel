@@ -1,8 +1,8 @@
 from __future__ import annotations
 import math
+import re
 
 import pymongo
-import re
 
 from ..helpers.types.data_type import Datatype
 from ..helpers.types.relation_type import RelationType
