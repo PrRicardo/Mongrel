@@ -69,7 +69,20 @@ class RelationDiscovery:
             elif item is not None:
                 if key not in tables[base_name]["columns"]:
                     tables[base_name]["columns"][key] = ColumnInfo(expected_values, path=path)
-                tables[base_name]["columns"][key].add_value(item)
+                col_info = tables[base_name]["columns"][key]
+                was_unique = col_info.unique
+                not_unique = tables[base_name]["columns"][key].add_value(item)
+                if was_unique and not col_info.locked and not_unique:
+                    # preserve last pk candidate
+                    ok = False
+                    for _, col in tables[base_name]["columns"].items():
+                        if col.unique:
+                            ok = True
+                            break
+                    if not ok:
+                        col_info.unique = True
+                        col_info.locked = True
+
         return tables, processed
 
     @staticmethod

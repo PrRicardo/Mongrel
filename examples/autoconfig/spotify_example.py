@@ -12,4 +12,4 @@ if __name__ == "__main__":
                                          mongo_database="hierarchical_relational_test",
                                          mongo_collection="test_tracks",
                                          sql_host='127.0.0.1', sql_database='spotify', sql_user='postgres',
-                                         sql_port=35433, sql_password=os.getenv("PASSWORD"), batch_size=5000)
+                                         sql_port=5432, sql_password=os.getenv("PASSWORD"), batch_size=5000)

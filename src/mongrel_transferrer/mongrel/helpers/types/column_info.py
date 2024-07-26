@@ -22,6 +22,7 @@ class ColumnInfo:
         self.is_list = is_list
         self.data_type = Datatype.BOOLEAN if not datatype else datatype
         self.length = 0 if not length else length
+        self.locked = False
 
     def get_data_type(self) -> str:
         return self.data_type.name
@@ -44,7 +45,7 @@ class ColumnInfo:
         if data_type == Datatype.TEXT:
             stringified_value = str(value)
             self.length = max(self.length, len(stringified_value))
-        if value in self.values:
+        if not self.locked and value in self.values:
             self.unique = False
             return True
         self.values.add(value, checked=True)

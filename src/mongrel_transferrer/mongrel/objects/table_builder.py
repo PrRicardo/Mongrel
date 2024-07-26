@@ -150,9 +150,10 @@ class TableBuilder:
                         else:
                             alias_relations = relation.get_alias_relations(self._relations)
                             for rellie in alias_relations:
-                                for reference in rellie.relations["n:1"]:
-                                    if reference not in done:
-                                        has_uninitialized_references = True
+                                if "n:1" in rellie.relations:
+                                    for reference in rellie.relations["n:1"]:
+                                        if reference not in done:
+                                            has_uninitialized_references = True
                             if not has_uninitialized_references:
                                 creation_stmt_inner = creation_stmt_inner + relation.make_creation_script(
                                     self._rel_dict, alias_relations)
