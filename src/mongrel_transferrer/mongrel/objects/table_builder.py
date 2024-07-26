@@ -13,13 +13,17 @@ class TableBuilder:
     """
     _relations: list[Table]
     _rel_dict: dict
+    keep_list_alias_relations: bool
 
-    def __init__(self, relations_vals: list[Table], relation_file_dict: dict):
+    def __init__(self, relations_vals: list[Table], relation_file_dict: dict, keep_list_alias_relations=True):
         """
         Initializes the class which is used to make the creation statement
         :param relations_vals: a list of all relations which
         :param relation_file_dict: dict of the relation
+        :param keep_list_alias_relations: Flag if alias relations of lists should be kept. Their information can be
+                                            retrieved from aggregating all n:m helper tables
         """
+        self.keep_list_alias_relations = keep_list_alias_relations
         self._relations = relations_vals
         self._rel_dict = self.prepare_rel_dict()
         self.add_columns_to_relations(relation_file_dict)
@@ -55,10 +59,11 @@ class TableBuilder:
                 for nm_relation in relation.relations['n:m']:
                     nm_table = relation.create_nm_table(
                         relations_vals[relations_vals.index(nm_relation)], self._rel_dict)
-                    if len(relation.columns) == 1 and not relation.alias:
+                    if len(relation.columns) == 1 and (not self.keep_list_alias_relations or relation.alias):
                         nm_table = self._remove_references(nm_table, relation)
                         to_remove.append(idx)
-                    if len(self._rel_dict[nm_relation].columns) == 1 and not self._rel_dict[nm_relation].alias:
+                    if len(self._rel_dict[nm_relation].columns) == 1 and (
+                            not self.keep_list_alias_relations or not self._rel_dict[nm_relation].alias):
                         nm_table = self._remove_references(nm_table, self._rel_dict[nm_relation])
                         to_remove.append(relations_vals.index(nm_relation))
                     if nm_table not in relations_vals:
@@ -106,6 +111,14 @@ class TableBuilder:
                 creation_stmt_inner = creation_stmt_inner + f'CREATE SCHEMA IF NOT EXISTS "{schema}";\n\n'
         return creation_stmt_inner
 
+    def check_for_uninitalized_alias_tables(self, alias_relations: list, done: list):
+        for rellie in alias_relations:
+            if "n:1" in rellie.relations:
+                for reference in rellie.relations["n:1"]:
+                    if reference not in done:
+                        return True
+        return False
+
     def make_creation_script(self) -> str:
         """
         Builds the entire relationscript which can be used to initialize the database.
@@ -149,10 +162,8 @@ class TableBuilder:
                             progress += 1
                         else:
                             alias_relations = relation.get_alias_relations(self._relations)
-                            for rellie in alias_relations:
-                                for reference in rellie.relations["n:1"]:
-                                    if reference not in done:
-                                        has_uninitialized_references = True
+                            has_uninitialized_references = self.check_for_uninitalized_alias_tables(alias_relations,
+                                                                                                    done)
                             if not has_uninitialized_references:
                                 creation_stmt_inner = creation_stmt_inner + relation.make_creation_script(
                                     self._rel_dict, alias_relations)

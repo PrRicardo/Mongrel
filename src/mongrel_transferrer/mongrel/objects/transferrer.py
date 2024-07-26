@@ -208,7 +208,8 @@ def transfer_data_from_mongo_to_postgres(relation_config_dict: dict, mapping_con
                                          mongo_database: str, mongo_collection: str,
                                          sql_host: str, sql_database: str, mongo_port: int = None, sql_port: int = None,
                                          sql_user: str = None, sql_password: str = None, mongo_user: str = None,
-                                         mongo_password: str = None, batch_size: int = 1000) -> None:
+                                         mongo_password: str = None, batch_size: int = 1000,
+                                         keep_list_alias_relations: bool = True) -> None:
     """
     A wrapper for all the required steps taken for a transfer
     :param relation_config_dict: dict of the relation config file
@@ -225,10 +226,12 @@ def transfer_data_from_mongo_to_postgres(relation_config_dict: dict, mapping_con
     :param mongo_user: optional, the user of the source mongo database
     :param mongo_password: optional, the password of the user for the source database
     :param batch_size: the batch size used
+    :param keep_list_alias_relations: Flag if alias relations of lists should be kept. Their information can be
+                                            retrieved from aggregating all n:m helper tables
     """
     relation_builder = RelationBuilder()
     relations = relation_builder.calculate_relations(relation_config_dict, mapping_config_path_dict)
-    table_builder = TableBuilder(relations, mapping_config_path_dict)
+    table_builder = TableBuilder(relations, mapping_config_path_dict, keep_list_alias_relations)
     creation_stmt = table_builder.make_creation_script()
     transferrer = Transferrer(table_builder.get_relations(), mongo_host, mongo_database, mongo_collection, sql_host,
                               sql_database, mongo_port, sql_port, sql_user, sql_password, mongo_user, mongo_password,
