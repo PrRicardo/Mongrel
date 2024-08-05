@@ -256,7 +256,9 @@ class Table:
                         self.columns.append(
                             Column(f'{rel_info.table}_{other_col.target_name}', other_col.path,
                                    other_col.sql_definition,
-                                   Field.PRIMARY_KEY if fk_are_pk else Field.FOREIGN_KEY, rel_info))
+                                   Field.PRIMARY_KEY if fk_are_pk else Field.FOREIGN_KEY, rel_info,
+                                   conversion_function=other_col.conversion_function,
+                                   conversion_args=other_col.conversion_args))
         for column in self.columns:
             if column.field_type == Field.PRIMARY_KEY and column.target_name not in self.pks:
                 self.pks.append(column.target_name)

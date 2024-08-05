@@ -192,6 +192,7 @@ class Transferrer:
                     if vals:
                         df = pd.DataFrame.from_dict(vals, orient='index').transpose()
                         relation_info = relation.info if not relation.alias else relation.alias
+                        df = df.dropna(axis=0, how='all')
                         data[relation_info] = pd.concat([data[relation_info], df], ignore_index=True)
                         data[relation_info].drop_duplicates(relation.pks)
                 for relation in self.relations:
