@@ -11,7 +11,7 @@ PostgreSQL. Currently only these two databases are supported as source and targe
 
 I've managed to deploy the package to PyPi :D Here is the link!
 ````commandline
-pip install mongrel-transferrer==0.0.1
+pip install mongrel-transferrer
 ````
 
 ## Requirements
@@ -63,9 +63,25 @@ Here is an example document to follow the documentation with.
   }
 }
 ```
+### Configuration Automode
+It is now possible to automatically generate configuration files. For this mongrel needs to scan all documents once 
+without transferring. During this phase relations and fields are discovered and configuration dicts are created.
+These configuration dicts can be adjusted manually after creation. A use case for that can be setting primary keys for 
+documents that don't have any clear pk candidates.
 
+#### Usage
+```python
+import pymongo
+from mongrel_transferrer import ConfigurationBuilder
 
-### Defining relations between the source tables
+if __name__ == "__main__":
+    client = pymongo.MongoClient('localhost', 27017)
+    mappings, relations = ConfigurationBuilder.build_configuration(
+        client["hierarchical_relational_test"]["test_tracks"], cutoff=1.0, schema_name="relationizing")
+```
+### Writing and understanding configurations
+
+#### Defining relations between the source tables
 
 On the relational side, target tables can be in relations with each other. These need to be described manually with
 the help of a relation json-file.
@@ -94,14 +110,14 @@ the help of a relation json-file.
 
 Every table can have two types of relations.
 
-#### n:1 / 1:n
+##### n:1 / 1:n
 
 The common n:1 relation, also used as a 1:1 relation. The n side receives a reference to the 1 side. The reference
 contains every field of the reference table's primary key with the prefix (other table name)_(reference field name).
 In our relations.json example, music.tracks will have the fields users_id and users_type since the primary key of
 music.users is composite of id and type.
 
-#### n:m / m:n
+##### n:m / m:n
 
 The m:n relation implies the existence of a helper table. If no helper table exists yet, using a n:m relation creates a
 helper table automatically, with the primary keys of the two connected tables. Internally a table is created which has
@@ -121,7 +137,7 @@ a 1:n relation to both tables. If you want to use your own helper table, you can
 }
 ```
 
-### Mapping Configuration
+#### Mapping Configuration
 
 ```json mappings.json
 {
@@ -149,7 +165,7 @@ a 1:n relation to both tables. If you want to use your own helper table, you can
 }
 ```
 
-#### Defining the source and target fields
+##### Defining the source and target fields
 
 With the second configuration file, the mapping of target and source fields need to be described. The configuration
 works as follows:
@@ -163,17 +179,17 @@ works as follows:
 3. The value describes the name and sql definition on the target system. These resemble CREATE-SQL syntax because they
    are used as-is in the creation statement on the target database.
 
-#### Transfer options
+##### Transfer options
 The reserved key "transfer_options" is used to store information about the transfer itself.     
 
-##### conversion_fields
+###### conversion_fields
 With the keyword "conversion_fields", fields can be defined that need to have a conversion function. In our example we 
 are converting a string to a date. With the fields "source_type" and "target_type" we define which conversion function 
 should be used. The arguments given in "args" are given as keywords arguments to the conversion function. New conversion
 functions can be added in transfer/helpers/conversions.py. Don't forget to add your new conversion method in 
 get_conversion as well!
 
-##### reference_keys
+###### reference_keys
 With the keyword "reference_keys", fields can be defined that have special roles in the transfer. Currently only primary
 keys are supported and foreign keys are inferred automatically. In our example we have only one ID-Field as a primary
 key, however composites are possible!
@@ -418,14 +434,17 @@ into one music.artists table. If there is different information on columns or PK
 ### Running
 
 ```python
+import json
 import os
-from mongrel_transferrer.mongrel.objects.transferrer import transfer_data_from_mongo_to_postgres
+from mongrel_transferrer import transfer_data_from_mongo_to_postgres
 
 if __name__ == "__main__":
-    transfer_data_from_mongo_to_postgres("spotify_relations.json",
-                                         "spotify_mappings.json", mongo_host="localhost",
-                                         mongo_database="hierarchical_relational_test", mongo_collection="test_tracks",
-                                         sql_host='127.0.0.1', sql_database='spotify', sql_user='postgres',
-                                         sql_port=5432, sql_password=os.getenv("PASSWORD"), conflict_handling="Drop")
-
+    with open("spotify_relations.json", encoding="utf-8") as relations:
+        with open("spotify_mappings.json", encoding="utf-8") as mappings:
+            transfer_data_from_mongo_to_postgres(json.load(relations),
+                                                 json.load(mappings), mongo_host="localhost",
+                                                 mongo_database="hierarchical_relational_test",
+                                                 mongo_collection="test_tracks",
+                                                 sql_host='127.0.0.1', sql_database='spotify', sql_user='postgres',
+                                                 sql_port=5432, sql_password=os.getenv("PASSWORD"))
 ```
