@@ -4,7 +4,7 @@ from csv import excel
 
 import pymongo
 import json
-from src.mongrel_transferrer.mongrel import MongrelTransferrer
+#from src.mongrel_transferrer.mongrel import MongrelTransferrer
 
 from docker_tester import DockerManagement
 
