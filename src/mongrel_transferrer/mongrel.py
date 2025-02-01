@@ -1,0 +1,2 @@
+class MongrelTransferrer:
+    pass
