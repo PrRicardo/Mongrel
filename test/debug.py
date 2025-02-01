@@ -35,7 +35,7 @@ class DebugDatabases:
                                                 db_port=self.postgres_port, db_password=self.db_password)
 
     def write_test_mongo(self, db_name: str = "testing", db_collection: str = "collie"):
-        with open('playlists.json') as file:
+        with open('playlists.json', encoding="UTF-8") as file:
             json_data = json.load(file)
         client = pymongo.MongoClient(host="localhost", port=self.mongo_port, password=self.db_password,
                                      username="mongo", authSource="admin")
