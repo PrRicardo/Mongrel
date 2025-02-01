@@ -89,9 +89,6 @@ class DockerManagement:
             raise FileExistsError("Docker network already exists, abort testing!")
         DockerManagement.create_network(network_name)
         DockerManagement.run_postgres_container(container_name, network_name, db_password, db_port)
-        # Wait for PostgreSQL to start
-        time.sleep(10)
-        return
 
     @staticmethod
     def create_mongodb_server(network_name: str, container_name: str, db_password: str, db_port: int = 27017):
@@ -101,8 +98,6 @@ class DockerManagement:
         DockerManagement.create_network(network_name)
         DockerManagement.run_mongodb_container(container_name=container_name, network_name=network_name,
                                                db_port=db_port, db_password=db_password)
-        # Wait for MongoDB to start
-        time.sleep(10)
         logger.info(f"MongoDB server '{container_name}' is up and running.")
 
     @staticmethod
