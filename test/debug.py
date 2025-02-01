@@ -1,7 +1,10 @@
 import hashlib
 import time
+from csv import excel
+
 import pymongo
 import json
+from src.mongrel_transferrer.mongrel import MongrelTransferrer
 
 from docker_tester import DockerManagement
 
@@ -30,9 +33,8 @@ class DebugDatabases:
                                                db_port=self.mongo_port, db_password=self.db_password)
         DockerManagement.create_postgres_server(network_name=pg_name, container_name=pg_name,
                                                 db_port=self.postgres_port, db_password=self.db_password)
-        print(self.db_password)
 
-    def write_test_mongo(self, db_name:str="testing", db_collection:str="collie"):
+    def write_test_mongo(self, db_name: str = "testing", db_collection: str = "collie"):
         with open('playlists.json') as file:
             json_data = json.load(file)
         client = pymongo.MongoClient(host="localhost", port=self.mongo_port, password=self.db_password,
@@ -43,8 +45,14 @@ class DebugDatabases:
             collie.insert_one(entry)
 
     def remove_infrastructure(self):
-        DockerManagement.remove_database_server(self._postgres_container_name, self._postgres_container_name)
-        DockerManagement.remove_database_server(self._mongo_container_name, self._mongo_container_name)
+        try:
+            DockerManagement.remove_database_server(self._postgres_container_name, self._postgres_container_name)
+        except:
+            pass
+        try:
+            DockerManagement.remove_database_server(self._mongo_container_name, self._mongo_container_name)
+        except:
+            pass
 
     def __enter__(self):
         self.create_infrastructure()
@@ -56,6 +64,8 @@ class DebugDatabases:
 
 if __name__ == "__main__":
     with DebugDatabases(mongo_port=37030, postgres_port=35450) as debug_db:
-        print("I work!")
         debug_db.write_test_mongo()
-    print("Now I don't!")
+        transferrer = MongrelTransferrer(mongo_host="localhost", mongo_port=debug_db.mongo_port,
+                                         mongo_user="mongo", mongo_password=debug_db.db_password,
+                                         mongo_database="testing", mongo_collection="collie")
+        transferrer.transfer()

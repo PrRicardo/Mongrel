@@ -1,0 +1,2 @@
+class TableStructure:
+    pass
