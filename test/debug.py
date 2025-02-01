@@ -1,6 +1,5 @@
 import hashlib
 import time
-from csv import excel
 
 import pymongo
 import json
