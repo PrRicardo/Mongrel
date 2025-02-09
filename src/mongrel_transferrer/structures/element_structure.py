@@ -122,8 +122,9 @@ class ElementStructure:
             return max(curr_max, max(child.largest_buffer_length() for child in self.children.values()))
         return curr_max
 
-    def write(self, schema: str, engine: sqlalchemy.engine,
-              replace: bool):
+    def write(self, schema: str, engine: sqlalchemy.engine, replace: bool):
         _upload(self.rows, [AUTO_ID], self.identifier, schema, engine, replace)
+        for child in self.children.values():
+            child.write(schema,engine,replace)
         _upload(self.rows, [self.parent.identifer, self.identifier],
                 f"{self.parent.identifer}2{self.identifier}", schema, engine, replace)

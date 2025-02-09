@@ -1,9 +1,19 @@
+import sqlalchemy
+
 from src.mongrel_transferrer.helpers.constants import ROOT_COLUMN
 from src.mongrel_transferrer.structures.element_structure import ElementStructure
 from pymongo import MongoClient
 from pymongo.database import Database
 from pymongo.collection import Collection
 
+
+def create_postgres_connection_string(host: str, dbname: str, user: str = None,
+                                      password: str = None, port: int = 5432) -> str:
+    connection_url = f"postgresql://"
+    if user and password:
+        connection_url += f"{user}:{password}@"
+    connection_url += f"{host}:{port}/{dbname}"
+    return connection_url
 
 class MongrelTransferrer:
     """
@@ -12,9 +22,9 @@ class MongrelTransferrer:
     root:ElementStructure
 
     def __init__(self, mongo_host: str, mongo_database: str, mongo_collection: str,
-                 sql_host: str = None, sql_database: str = None, mongo_port: int = None, sql_port: int = None,
-                 sql_user=None,
-                 sql_password=None, mongo_user: str = None, mongo_password: str = None, batch_size=1000):
+                 sql_host: str = None, sql_database: str = None, mongo_port: int = None,
+                 sql_port: int = None, sql_user=None, sql_password=None, mongo_user: str = None,
+                 mongo_password: str = None, batch_size=10):
         """
         Initializes the transfer class with all the required information
         :param mongo_host: the ip address or name of the mongo server
@@ -50,10 +60,20 @@ class MongrelTransferrer:
         self.root.add_doc(doc)
 
     def transfer(self):
+        first_write = True
         with MongoClient(host=self.mongo_host, port=self.mongo_port, username=self.mongo_user,
                          password=self.mongo_password) as client:
             database: Database = client[self.mongo_database]
             collection: Collection = database[self.mongo_collection]
             for doc in collection.find():
                 self.add_doc(doc)
-                print(self.root.largest_buffer_length())
+                if self.root.largest_buffer_length() > self.batch_size:
+                    engine = sqlalchemy.create_engine(create_postgres_connection_string(
+                        host=self.sql_host,
+                        dbname=self.sql_database,
+                        user=self.sql_user,
+                        password=self.sql_password,
+                        port=self.sql_port
+                    ))
+                    self.root.write('public', engine=engine, replace=first_write)
+                    first_write = False
