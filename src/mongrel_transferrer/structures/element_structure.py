@@ -2,19 +2,43 @@ from typing import Any
 
 import pandas as pd
 import sqlalchemy
+from sqlalchemy import text
+from sqlalchemy.dialects import postgresql
 
 from ..helpers.constants import AUTO_ID, ROOT_COLUMN
 from ..helpers.hashing import hash_list, hash_dict, hash_scalar
 from ..helpers.relation_types import RelationType
 from src.mongrel_transferrer.structures.relation import Relation
+from ..helpers.sql import get_columns, is_valid_column, get_col_type
 
+
+def _add_missing_columns(data: pd.DataFrame, engine: sqlalchemy.Engine, table: str, schema):
+    columns = get_columns(engine, table, schema)
+    required_columns = [col for col in data.columns if col not in columns]
+    if any(not is_valid_column(col) for col in required_columns):
+        raise AssertionError("Is this... SQL Injection?")
+    alter_query = f"ALTER TABLE {schema}.{table} "
+    alter_query += ", ".join(f"ADD COLUMN {col} {get_col_type(data[col].dtype)}" for col in required_columns)
+    with engine.connect() as conn:
+        conn.execute(text(alter_query))
+        conn.commit()
+    return
 
 def _upload(data: list[dict], df_pks: list[str], table: str, schema: str,
             engine: sqlalchemy.engine, replace: bool):
-    data = pd.DataFrame(data, index=df_pks)
-    data.to_sql(name=table, schema=schema, if_exists="append" if not replace else "replace",
-                con=engine, index_label=df_pks)
-
+    pks = {}
+    for pk in df_pks:
+        pks[pk] = postgresql.BIGINT
+    data = pd.DataFrame(data)
+    try:
+        data.to_sql(name=table, schema=schema, if_exists="append" if not replace else "replace",
+                    con=engine, dtype=pks)
+    except sqlalchemy.exc.ProgrammingError as e:
+        if not 'psycopg2.errors.UndefinedColumn' in str(e):
+            raise e
+        _add_missing_columns(data, engine, table, schema)
+        data.to_sql(name=table, schema=schema, if_exists="append" if not replace else "replace",
+                    con=engine, dtype=pks)
 
 class ElementStructure:
     parent: Any  # ElementStructure
@@ -58,11 +82,12 @@ class ElementStructure:
         self.hashes.add(hash_id)
         return res
 
-    def _make_child_identifier(self, path):
+    def _make_child_identifier(self, path) -> str:
         counter = -1
         while True:
             candidate = "_".join(path[counter:])
             if candidate not in self.identifier_lookup_ref:
+                self.identifier_lookup_ref.add(candidate)
                 return candidate
             counter -= 1
 
@@ -100,12 +125,12 @@ class ElementStructure:
     def to_df(self):
         return pd.DataFrame(self.rows)
 
-    def parent_relations_to_df(self):
+    def parent_relations_to_list(self):
         to_add = []
-        for parent_id, child_ids in self.parent_relation_dict:
+        for parent_id, child_ids in self.parent_relation_dict.items():
             for child_id in child_ids:
-                to_add.append({self.parent.identifer: parent_id, self.identifier: child_id})
-        return pd.DataFrame(to_add)
+                to_add.append({self.parent.identifier: parent_id, self.identifier: child_id})
+        return to_add
 
     def add_doc(self, sub_element: Any, parent_hash: int = None):
         if isinstance(sub_element, dict):
@@ -125,6 +150,9 @@ class ElementStructure:
     def write(self, schema: str, engine: sqlalchemy.engine, replace: bool):
         _upload(self.rows, [AUTO_ID], self.identifier, schema, engine, replace)
         for child in self.children.values():
-            child.write(schema,engine,replace)
-        _upload(self.rows, [self.parent.identifer, self.identifier],
-                f"{self.parent.identifer}2{self.identifier}", schema, engine, replace)
+            child.write(schema, engine, replace)
+        if self.parent is not None:
+            _upload(self.parent_relations_to_list(), [self.parent.identifier, self.identifier],
+                    f"{self.parent.identifier}2{self.identifier}", schema, engine, replace)
+        self.rows = []
+        self.parent_relation_dict = {}

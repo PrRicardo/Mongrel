@@ -24,7 +24,7 @@ class MongrelTransferrer:
     def __init__(self, mongo_host: str, mongo_database: str, mongo_collection: str,
                  sql_host: str = None, sql_database: str = None, mongo_port: int = None,
                  sql_port: int = None, sql_user=None, sql_password=None, mongo_user: str = None,
-                 mongo_password: str = None, batch_size=10):
+                 mongo_password: str = None, batch_size=10000):
         """
         Initializes the transfer class with all the required information
         :param mongo_host: the ip address or name of the mongo server
@@ -65,15 +65,16 @@ class MongrelTransferrer:
                          password=self.mongo_password) as client:
             database: Database = client[self.mongo_database]
             collection: Collection = database[self.mongo_collection]
+            engine = sqlalchemy.create_engine(create_postgres_connection_string(
+                host=self.sql_host,
+                dbname=self.sql_database,
+                user=self.sql_user,
+                password=self.sql_password,
+                port=self.sql_port
+            ))
             for doc in collection.find():
                 self.add_doc(doc)
                 if self.root.largest_buffer_length() > self.batch_size:
-                    engine = sqlalchemy.create_engine(create_postgres_connection_string(
-                        host=self.sql_host,
-                        dbname=self.sql_database,
-                        user=self.sql_user,
-                        password=self.sql_password,
-                        port=self.sql_port
-                    ))
                     self.root.write('public', engine=engine, replace=first_write)
                     first_write = False
+            self.root.write('public', engine=engine, replace=first_write)

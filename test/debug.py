@@ -69,5 +69,9 @@ if __name__ == "__main__":
         print(f"PostgreSQL: postgres:{debug_db.db_password}")
         transferrer = MongrelTransferrer(mongo_host="localhost", mongo_port=debug_db.mongo_port,
                                          mongo_user="mongo", mongo_password=debug_db.db_password,
-                                         mongo_database="testing", mongo_collection="collie")
+                                         mongo_database="testing", mongo_collection="collie",
+                                         sql_database='postgres', sql_host='localhost',
+                                         sql_port=debug_db.postgres_port, sql_user='postgres',
+                                         sql_password=debug_db.db_password)
         transferrer.transfer()
+        pass
