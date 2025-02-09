@@ -64,6 +64,9 @@ class DebugDatabases:
 if __name__ == "__main__":
     with DebugDatabases(mongo_port=37030, postgres_port=35450) as debug_db:
         debug_db.write_test_mongo()
+        print(f"Testing password and users")
+        print(f"Mongo: mongo:{debug_db.db_password}")
+        print(f"PostgreSQL: postgres:{debug_db.db_password}")
         transferrer = MongrelTransferrer(mongo_host="localhost", mongo_port=debug_db.mongo_port,
                                          mongo_user="mongo", mongo_password=debug_db.db_password,
                                          mongo_database="testing", mongo_collection="collie")

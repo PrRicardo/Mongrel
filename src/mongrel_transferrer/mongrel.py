@@ -1,3 +1,4 @@
+from src.mongrel_transferrer.helpers.constants import ROOT_COLUMN
 from src.mongrel_transferrer.structures.element_structure import ElementStructure
 from pymongo import MongoClient
 from pymongo.database import Database
@@ -42,7 +43,8 @@ class MongrelTransferrer:
         self.mongo_host = mongo_host
         self.batch_size = batch_size
         self.length_lookup = {}
-        self.root = ElementStructure()
+        self.identifier_lookup = {ROOT_COLUMN}
+        self.root = ElementStructure(ROOT_COLUMN, self.identifier_lookup)
 
     def add_doc(self, doc: dict):
         self.root.add_doc(doc)
@@ -54,3 +56,4 @@ class MongrelTransferrer:
             collection: Collection = database[self.mongo_collection]
             for doc in collection.find():
                 self.add_doc(doc)
+                print(self.root.largest_buffer_length())
