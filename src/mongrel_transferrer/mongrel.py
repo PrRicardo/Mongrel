@@ -1,4 +1,4 @@
-from src.mongrel_transferrer.structures.element_structure import TableStructure
+from src.mongrel_transferrer.structures.element_structure import ElementStructure
 from pymongo import MongoClient
 from pymongo.database import Database
 from pymongo.collection import Collection
@@ -8,6 +8,7 @@ class MongrelTransferrer:
     """
     The main class that handles the transfer
     """
+    root:ElementStructure
 
     def __init__(self, mongo_host: str, mongo_database: str, mongo_collection: str,
                  sql_host: str = None, sql_database: str = None, mongo_port: int = None, sql_port: int = None,
@@ -41,9 +42,10 @@ class MongrelTransferrer:
         self.mongo_host = mongo_host
         self.batch_size = batch_size
         self.length_lookup = {}
+        self.root = ElementStructure()
 
     def add_doc(self, doc: dict):
-        pass
+        self.root.add_doc(doc)
 
     def transfer(self):
         with MongoClient(host=self.mongo_host, port=self.mongo_port, username=self.mongo_user,
