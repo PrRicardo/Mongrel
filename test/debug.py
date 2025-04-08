@@ -74,4 +74,3 @@ if __name__ == "__main__":
                                          sql_port=debug_db.postgres_port, sql_user='postgres',
                                          sql_password=debug_db.db_password)
         transferrer.transfer()
-        pass

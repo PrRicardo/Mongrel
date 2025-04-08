@@ -24,6 +24,7 @@ def _add_missing_columns(data: pd.DataFrame, engine: sqlalchemy.Engine, table: s
         conn.commit()
     return
 
+
 def _upload(data: list[dict], df_pks: list[str], table: str, schema: str,
             engine: sqlalchemy.engine, replace: bool):
     pks = {}
@@ -40,6 +41,7 @@ def _upload(data: list[dict], df_pks: list[str], table: str, schema: str,
         data.to_sql(name=table, schema=schema, if_exists="append" if not replace else "replace",
                     con=engine, dtype=pks)
 
+
 class ElementStructure:
     parent: Any  # ElementStructure
     children: dict[int, Any]  # ElementStructure
@@ -51,6 +53,7 @@ class ElementStructure:
     parent_relation_dict: dict[int, set]
     identifier: str
     identifier_lookup_ref: set
+    columns: set
 
     def __init__(self, identifier: str, identifier_lookup_ref: set, parent: Any = None, path: list[str] = None):
         self.parent = parent
@@ -62,6 +65,7 @@ class ElementStructure:
         self.relations = []
         self.rows = []
         self.parent_relation_dict = {}
+        self.columns = set()
         if parent is not None:
             self.parent_relation = Relation(self.parent.identifier, self.identifier)
         self.identifier_lookup_ref = identifier_lookup_ref
@@ -104,6 +108,7 @@ class ElementStructure:
 
     def _scalar_handling(self, sub_element: Any, parent_hash: int):
         hash_id = hash_scalar(sub_element)
+        self.columns.add(self.identifier)
         if self._preamble(hash_id, parent_hash):
             return
         key = self.path[-1] if self.parent is not None else ROOT_COLUMN
@@ -119,6 +124,8 @@ class ElementStructure:
             if isinstance(item, list) or isinstance(item, dict):
                 self._child_handling(sub_element[key], self.path + [key], hash_id)
                 continue
+            if key not in self.columns:
+                self.columns.add(key)
             to_add[key] = item
         self.rows.append(to_add)
 

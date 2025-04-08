@@ -6,6 +6,8 @@ from pymongo import MongoClient
 from pymongo.database import Database
 from pymongo.collection import Collection
 
+from src.mongrel_transferrer.structures.table_structure import TableStructure
+
 
 def create_postgres_connection_string(host: str, dbname: str, user: str = None,
                                       password: str = None, port: int = 5432) -> str:
@@ -15,11 +17,12 @@ def create_postgres_connection_string(host: str, dbname: str, user: str = None,
     connection_url += f"{host}:{port}/{dbname}"
     return connection_url
 
+
 class MongrelTransferrer:
     """
     The main class that handles the transfer
     """
-    root:ElementStructure
+    root: ElementStructure
 
     def __init__(self, mongo_host: str, mongo_database: str, mongo_collection: str,
                  sql_host: str = None, sql_database: str = None, mongo_port: int = None,
@@ -59,7 +62,7 @@ class MongrelTransferrer:
     def add_doc(self, doc: dict):
         self.root.add_doc(doc)
 
-    def transfer(self):
+    def write_to_pg(self):
         first_write = True
         with MongoClient(host=self.mongo_host, port=self.mongo_port, username=self.mongo_user,
                          password=self.mongo_password) as client:
@@ -78,3 +81,29 @@ class MongrelTransferrer:
                     self.root.write('public', engine=engine, replace=first_write)
                     first_write = False
             self.root.write('public', engine=engine, replace=first_write)
+
+    def similarity_tables(self, element: ElementStructure, similarity_tables: list[TableStructure]):
+        added = False
+        for table in similarity_tables:
+            if table.column_similarity(element) == 1:
+                table.add_element(element)
+                added = True
+                break
+        if not added:
+            similarity_tables.append(TableStructure(element))
+        for child in element.children.values():
+            similarity_tables = self.similarity_tables(child, similarity_tables)
+        return similarity_tables
+
+    def summarize(self):
+        tables = self.similarity_tables(self.root, [])
+        # find similar tables
+        # unionize similar tables
+        # resolve non m:n relationships
+        # combine 1:1 relationships
+        # add 1:n relationship ids to table
+        pass
+
+    def transfer(self):
+        self.write_to_pg()
+        self.summarize()
